@@ -10,13 +10,15 @@ export class User {
 
 const UserModel = getModelForClass(User)
 
-export function findOrCreateUser(id: number) {
+export function findOrCreateUser(id: number, defaultLanguage?: string) {
   return UserModel.findOneAndUpdate(
     { id },
-    {},
+    { $setOnInsert: { id, ...(defaultLanguage ? { language: defaultLanguage } : {}) } },
     {
       upsert: true,
       new: true,
-    }
-  )
+      setDefaultsOnInsert: true,
+      runValidators: true,
+    },
+  ).exec()
 }

@@ -3,3 +3,10 @@ help: |
   <b>Бот</b> является примером бота на Telegram.
 language: Пожалуйста, выберите язык.
 language_selected: <b>Бот</b> теперь говорит по-русски.
+inline:
+  no_results_title: "Ничего не найдено"
+  no_results_description: "Ничего не найдено по “${query}”"
+  no_results_message: "Ничего не найдено по “${query}”. Попробуйте другое название, исправьте написание или добавьте год (например, “Dune 2021”)."
+  api_error_title: "Сервис недоступен"
+  api_error_description: "Нет ответа от Kinorium"
+  api_error_message: "Kinorium временно недоступен. Попробуйте ещё раз через минуту."

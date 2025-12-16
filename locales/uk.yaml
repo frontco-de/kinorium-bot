@@ -1,0 +1,12 @@
+name: Українська
+help: |
+  <b>Цей бот</b> показує, як можна будувати Telegram-ботів.
+language: Будь ласка, оберіть мову.
+language_selected: <b>Цей бот</b> тепер говорить українською.
+inline:
+  no_results_title: "Нічого не знайдено"
+  no_results_description: "Нічого не знайдено за “${query}”"
+  no_results_message: "Нічого не знайдено за “${query}”. Спробуйте іншу назву, виправте написання або додайте рік (напр., “Dune 2021”)."
+  api_error_title: "Сервіс недоступний"
+  api_error_description: "Немає відповіді від Kinorium"
+  api_error_message: "Kinorium тимчасово недоступний. Спробуйте ще раз за хвилину."
