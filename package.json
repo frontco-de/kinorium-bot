@@ -1,17 +1,17 @@
 {
-  "name": "telegram-bot-starter",
+  "name": "kinorium-bot",
   "version": "1.0.0",
-  "description": "Telegram bot starter based on grammY",
+  "description": "Telegram bot for finding movies and tv-shows on Kinorium",
   "main": "dist/app.js",
   "repository": "https://github.com/Borodutch/telegram-bot-template",
-  "author": "backmeupplz <backmeupplz@gmail.com>",
+  "author": "Pylyp Borysov <bruha.mail@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "distribute": "npm run build-ts && node dist/app.js",
-    "develop": "tsc-watch --skipLibCheck --onSuccess 'node dist/app.js'",
+    "distribute": "yarn build-ts && node dist/app.js",
+    "dev": "tsc-watch --skipLibCheck --onSuccess 'node dist/app.js'",
     "build-ts": "tsc --skipLibCheck",
     "pretty": "prettier --check src",
-    "lint": "npm run pretty && eslint --max-warnings 0 ."
+    "lint": "yarn pretty && eslint --max-warnings 0 ."
   },
   "dependencies": {
     "@grammyjs/i18n": "^0.5.1",
@@ -47,5 +47,5 @@
   "_moduleAliases": {
     "@": "dist"
   },
-  "packageManager": "npm@11.6.2"
+  "packageManager": "yarn@3.1.0"
 }

@@ -73,7 +73,7 @@ function isNoResultsError(error: NonNullable<KinoriumResponse['error']>): boolea
 export async function searchMoviesDetailed(query: string): Promise<KinoriumSearchResult> {
   try {
     // Clean the API key (remove any trailing &q if present)
-    const apiKey = env.KINORIUMAPIKEY.replace(/&q$/, '').trim()
+    const apiKey = env.APIKEY.replace(/&q$/, '').trim()
 
     // Encode the query for URL
     const encodedQuery = encodeURIComponent(query)

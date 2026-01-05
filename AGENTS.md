@@ -5,6 +5,7 @@ Instructions for AI coding agents working in this repository.
 ## Project Overview
 
 This is a TypeScript Telegram bot starter built on grammY (based on https://github.com/frontco-de/kinorium-bot). It includes:
+
 - Inline-mode search: takes inline query text, calls the Kinorium API, and returns inline article results.
 - MongoDB persistence for a `User` model (stores language preference).
 - i18n via YAML locale files and a language selection menu.
@@ -24,21 +25,23 @@ This is a TypeScript Telegram bot starter built on grammY (based on https://gith
 ## Environment Variables
 
 Required (validated by `src/helpers/env.ts`):
+
 - `TOKEN` — Telegram bot token.
 - `MONGO` — MongoDB connection string.
-- `KINORIUMAPIKEY` — Kinorium API key used for search.
+- `APIKEY` — Kinorium API key used for search.
 
 Notes:
+
 - `.env` is developer-specific and may contain secrets; do not commit it.
 - Use `.env.sample` for documented placeholders.
 
 ## Common Commands
 
-- Install: `npm install`
-- Dev (watch + run compiled output): `npm run develop`
-- Build TypeScript: `npm run build-ts`
-- Run built bot: `node dist/app.js` (or `npm run distribute`)
-- Lint/format check: `npm run lint` (runs `prettier --check src` + eslint)
+- Install: `yarn`
+- Dev (watch + run compiled output): `yarn dev`
+- Build TypeScript: `yarn build-ts`
+- Run built bot: `node dist/app.js` (or `yarn distribute`)
+- Lint/format check: `yarn lint` (runs `prettier --check src` + eslint)
 
 ## Code Style & Conventions
 
@@ -55,7 +58,7 @@ Notes:
 
 - Do not edit generated files in `dist/`; edit `src/` and rebuild if needed.
 - Avoid introducing new dependencies unless necessary; prefer existing libraries.
-- When you change behavior, run the narrowest relevant command(s) (e.g., `npm run build-ts`, then `npm run lint` if appropriate).
+- When you change behavior, run the narrowest relevant command(s) (e.g., `yarn build-ts`, then `yarn lint` if appropriate).
 - If a change affects env vars, update both `README.md` and `.env.sample`.
 - Be careful with `.env` contents in logs, diffs, and messages—treat it as secret.
 

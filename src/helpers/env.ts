@@ -9,5 +9,5 @@ dotenv.config({ path: resolve(cwd(), '.env'), quiet: true })
 export default cleanEnv(process.env, {
   TOKEN: str(),
   MONGO: str(),
-  KINORIUMAPIKEY: str(),
+  APIKEY: str(),
 })
