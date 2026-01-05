@@ -3,3 +3,10 @@ help: |
   <b>This bot</b> allows you to see how Telegram bots can be built.
 language: Please, select the language.
 language_selected: <b>This bot</b> now speaks English.
+inline:
+  no_results_title: "No results"
+  no_results_description: "No results for “${query}”"
+  no_results_message: "No results for “${query}”. Try another title, fix spelling, or add a year (e.g., “Dune 2021”)."
+  api_error_title: "Service unavailable"
+  api_error_description: "Can't reach Kinorium"
+  api_error_message: "Kinorium is temporarily unavailable. Please try again in a minute."

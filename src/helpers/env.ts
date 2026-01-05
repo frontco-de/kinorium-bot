@@ -3,10 +3,11 @@ import { cleanEnv, str } from 'envalid'
 import { cwd } from 'process'
 import { resolve } from 'path'
 
-dotenv.config({ path: resolve(cwd(), '.env') })
+dotenv.config({ path: resolve(cwd(), '.env'), quiet: true })
 
-// eslint-disable-next-line node/no-process-env
+// eslint-disable-next-line n/no-process-env
 export default cleanEnv(process.env, {
   TOKEN: str(),
   MONGO: str(),
+  APIKEY: str(),
 })

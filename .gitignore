@@ -3,11 +3,4 @@ dist
 .env
 *.log
 
-# yarn
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+.DS_Store
