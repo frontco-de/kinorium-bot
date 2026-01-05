@@ -38,7 +38,9 @@ export function getKinoriumMovieUrl(id: number | string) {
   return `https://kinorium.com/${id}/`
 }
 
-export function addKinoriumMovieUrls(movies: KinoriumMovie[]): KinoriumMovieWithUrl[] {
+export function addKinoriumMovieUrls(
+  movies: KinoriumMovie[]
+): KinoriumMovieWithUrl[] {
   return movies.map((movie) => ({
     ...movie,
     url: getKinoriumMovieUrl(movie.id),
@@ -50,7 +52,9 @@ type KinoriumSearchResult =
   | { kind: 'no_results'; movies: [] }
   | { kind: 'error'; movies: [] }
 
-function isNoResultsError(error: NonNullable<KinoriumResponse['error']>): boolean {
+function isNoResultsError(
+  error: NonNullable<KinoriumResponse['error']>
+): boolean {
   if (error.code === 404) {
     return true
   }
@@ -70,7 +74,9 @@ function isNoResultsError(error: NonNullable<KinoriumResponse['error']>): boolea
  * @param query - Search query string
  * @returns Promise with result kind + movies
  */
-export async function searchMoviesDetailed(query: string): Promise<KinoriumSearchResult> {
+export async function searchMoviesDetailed(
+  query: string
+): Promise<KinoriumSearchResult> {
   try {
     // Clean the API key (remove any trailing &q if present)
     const apiKey = env.APIKEY.replace(/&q$/, '').trim()
@@ -110,9 +116,16 @@ export async function searchMoviesDetailed(query: string): Promise<KinoriumSearc
   }
 }
 
-export async function searchMovies(query: string): Promise<KinoriumMovieWithUrl[]> {
+export async function searchMovies(
+  query: string
+): Promise<KinoriumMovieWithUrl[]> {
   const result = await searchMoviesDetailed(query)
   return result.movies
 }
 
-export type { KinoriumMovie, KinoriumMovieWithUrl, KinoriumResponse, KinoriumSearchResult }
+export type {
+  KinoriumMovie,
+  KinoriumMovieWithUrl,
+  KinoriumResponse,
+  KinoriumSearchResult,
+}

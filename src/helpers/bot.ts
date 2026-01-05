@@ -31,19 +31,29 @@ export function registerInlineQueryHandlers() {
         const title = ctx.i18n.t('inline.api_error_title')
         const description = ctx.i18n.t('inline.api_error_description')
         const text = ctx.i18n.t('inline.api_error_message')
-        await ctx.answerInlineQuery([R.article('api-error', title, { description }).text(text)], {
-          cache_time: 30,
-        })
+        await ctx.answerInlineQuery(
+          [R.article('api-error', title, { description }).text(text)],
+          {
+            cache_time: 30,
+          }
+        )
         return
       }
 
       if (searchResult.kind === 'no_results') {
         const title = ctx.i18n.t('inline.no_results_title')
-        const description = ctx.i18n.t('inline.no_results_description', { query: searchText })
-        const text = ctx.i18n.t('inline.no_results_message', { query: searchText })
-        await ctx.answerInlineQuery([R.article('no-results', title, { description }).text(text)], {
-          cache_time: 30,
+        const description = ctx.i18n.t('inline.no_results_description', {
+          query: searchText,
         })
+        const text = ctx.i18n.t('inline.no_results_message', {
+          query: searchText,
+        })
+        await ctx.answerInlineQuery(
+          [R.article('no-results', title, { description }).text(text)],
+          {
+            cache_time: 30,
+          }
+        )
         return
       }
 
@@ -67,7 +77,9 @@ export function registerInlineQueryHandlers() {
           : String(movie.year || movie.year_serial_b || '')
         const description = `${typeLabel}${yearText ? ` (${yearText})` : ''}`
         const text = `Title: ${title}\nOriginal: ${movie.name}\nType: ${typeLabel}${
-          yearText ? `\n${hasSerialYearRange ? 'Years' : 'Year'}: ${yearText}` : ''
+          yearText
+            ? `\n${hasSerialYearRange ? 'Years' : 'Year'}: ${yearText}`
+            : ''
         }`
         const textWithLink = `${text}\nLink: ${movie.url}`
 
@@ -86,14 +98,20 @@ export function registerInlineQueryHandlers() {
           articleOptions.thumbnail_url = thumbnailUrl
         }
 
-        return R.article(`movie-${movie.id}`, title, articleOptions).text(textWithLink)
+        return R.article(`movie-${movie.id}`, title, articleOptions).text(
+          textWithLink
+        )
       })
 
       // If no movies found, provide a default result
       if (results.length === 0) {
         const title = ctx.i18n.t('inline.no_results_title')
-        const description = ctx.i18n.t('inline.no_results_description', { query: searchText })
-        const text = ctx.i18n.t('inline.no_results_message', { query: searchText })
+        const description = ctx.i18n.t('inline.no_results_description', {
+          query: searchText,
+        })
+        const text = ctx.i18n.t('inline.no_results_message', {
+          query: searchText,
+        })
         results.push(R.article('no-results', title, { description }).text(text))
       }
 

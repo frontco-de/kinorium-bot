@@ -15,7 +15,11 @@ import sendHelp from '@/handlers/help'
 import startMongo from '@/helpers/startMongo'
 
 function getConcurrencyKey(ctx: Context) {
-  return ctx.chat?.id?.toString() ?? ctx.from?.id?.toString() ?? ctx.update.update_id.toString()
+  return (
+    ctx.chat?.id?.toString() ??
+    ctx.from?.id?.toString() ??
+    ctx.update.update_id.toString()
+  )
 }
 
 async function runApp() {

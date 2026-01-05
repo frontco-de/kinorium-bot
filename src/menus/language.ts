@@ -12,7 +12,9 @@ interface YamlWithName {
 const localeFilePaths = readdirSync(resolve(cwd(), 'locales'))
 
 const localeFile = (path: string) => {
-  return load(readFileSync(resolve(cwd(), 'locales', path), 'utf8')) as YamlWithName
+  return load(
+    readFileSync(resolve(cwd(), 'locales', path), 'utf8')
+  ) as YamlWithName
 }
 
 const setLanguage = (languageCode: string) => async (ctx: Context) => {
