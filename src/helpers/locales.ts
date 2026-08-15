@@ -32,7 +32,7 @@ function parseLocale(code: SupportedLocale, source: string): LocaleDefinition {
 
   return {
     code,
-    messages: messages as Record<string, unknown>,
+    messages,
     name: messages.name,
   }
 }
