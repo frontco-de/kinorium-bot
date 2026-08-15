@@ -30,6 +30,8 @@ unset TOKEN APIKEY WEBHOOK_SECRET
 
 `set -a` exports variables loaded by `source`; `set +a` restores normal shell behavior. Copy the returned `result` fields into the public `BOT_INFO` object in `wrangler.jsonc`, then run `yarn types`. Restore production bot metadata before promotion.
 
+`BOT_INFO` mirrors Telegram's `getMe` response; it does not configure bot capabilities. Do not manually force fields to `true`. Standard inline mode requires `supports_inline_queries: true`, enabled through BotFather's `/setinline`. `can_join_groups` is unrelated to inline mode, and `supports_guest_queries` belongs to Telegram's separate guest-bot feature, which this project does not handle.
+
 For local development, initialize D1 with `yarn d1:migrate:local`, then run `yarn dev` and check `http://localhost:8787/health`.
 
 ## 2. Deploy the Worker and D1
@@ -87,3 +89,20 @@ The Worker caches only successful, non-empty searches for five minutes. Cache ke
 After validation, merge the feature branch to `main`, update `BOT_INFO` for the production bot, upload its own secrets, deploy that exact commit, apply migrations, and register its webhook. For later updates, repeat validation, deployment, migration, and smoke tests in that order; webhook registration is only necessary when its URL or secret changes.
 
 Use `npx wrangler versions list` to identify a deployed version and `npx wrangler rollback <VERSION_ID>` to restore it. D1 migrations are forward-only; assess schema compatibility before rollback. To disconnect a test bot, call Telegram's `deleteWebhook` endpoint. Rotate all affected secrets immediately if one is exposed.
+
+## Keep the Test Bot for Later
+
+Keep the test bot registered in BotFather, but disconnect it before its Worker secrets are replaced. While `.env` still contains the test token, delete its webhook and pending test updates:
+
+```sh
+set -a
+source .env
+set +a
+curl --fail-with-body --request POST \
+  "https://api.telegram.org/bot${TOKEN}/deleteWebhook" \
+  --data-urlencode "drop_pending_updates=true"
+curl --fail-with-body "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
+unset TOKEN APIKEY WEBHOOK_SECRET
+```
+
+Confirm that `getWebhookInfo` returns an empty `url`, then store the test token securely outside the repository. If you reactivate the bot later, use a separate `kinorium-bot-test` Worker and D1 database so test and production secrets and language preferences remain isolated. When reconnecting the test webhook, pass `drop_pending_updates=true` to `setWebhook` to discard updates accumulated while it was offline.
