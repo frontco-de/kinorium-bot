@@ -13,6 +13,12 @@ describe('Kinorium search', () => {
             name_orig: 'Dune',
             year: 2021,
           },
+          {
+            id: 124,
+            mixtype: 'movie',
+            name: 'Дюна: Частина друга',
+            year: 2024,
+          },
         ],
       })
     )
@@ -26,6 +32,12 @@ describe('Kinorium search', () => {
           id: 123,
           name: 'Дюна 2021',
           url: 'https://ua.kinorium.com/123/',
+        },
+        {
+          id: 124,
+          name: 'Дюна: Частина друга',
+          name_orig: '',
+          url: 'https://ua.kinorium.com/124/',
         },
       ],
     })

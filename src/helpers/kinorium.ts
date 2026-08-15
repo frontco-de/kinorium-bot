@@ -3,8 +3,8 @@ import { type SupportedLocale } from '@/helpers/locales'
 export interface KinoriumMovie {
   id: number
   mixtype: string
-  name: string
-  name_orig: string
+  name?: string
+  name_orig?: string
   year?: number
   year_serial_b?: number
   year_serial_e?: number
@@ -12,7 +12,11 @@ export interface KinoriumMovie {
   poster?: string
 }
 
-type KinoriumMovieWithUrl = KinoriumMovie & { url: string }
+type KinoriumMovieWithUrl = Omit<KinoriumMovie, 'name' | 'name_orig'> & {
+  name: string
+  name_orig: string
+  url: string
+}
 
 interface KinoriumResponse {
   movie_list: KinoriumMovie[]
@@ -55,7 +59,8 @@ async function fetchWithTimeout(
   }
 }
 
-function decodeHtmlEntities(value: string): string {
+function decodeHtmlEntities(value: unknown): string {
+  if (typeof value !== 'string') return ''
   return value.replace(
     /&(#(?:x[\da-f]+|\d+)|[a-z]+);/gi,
     (entity, code: string) => {
@@ -92,12 +97,14 @@ export function addKinoriumMovieUrls(
   movies: KinoriumMovie[],
   language: SupportedLocale
 ): KinoriumMovieWithUrl[] {
-  return movies.map((movie) => ({
-    ...movie,
-    name: decodeHtmlEntities(movie.name),
-    name_orig: decodeHtmlEntities(movie.name_orig),
-    url: getKinoriumMovieUrl(movie.id, language),
-  }))
+  return movies
+    .map((movie) => ({
+      ...movie,
+      name: decodeHtmlEntities(movie.name),
+      name_orig: decodeHtmlEntities(movie.name_orig),
+      url: getKinoriumMovieUrl(movie.id, language),
+    }))
+    .filter((movie) => movie.name.length > 0 || movie.name_orig.length > 0)
 }
 
 type KinoriumSearchResult =
