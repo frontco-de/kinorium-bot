@@ -10,8 +10,9 @@ The application is a strict TypeScript Telegram bot built with grammY:
 2. `src/helpers/bot.ts` composes grammY middleware, menus, commands, and inline-query handling for each request.
 3. `src/middlewares/attachUser.ts` loads or creates a D1 user and infers an `en`, `ru`, or `uk` default from Telegram.
 4. `src/middlewares/configureI18n.ts` applies the user's locale; bundled `locales/*.yaml` files supply translated content.
-5. Inline queries registered through `src/helpers/bot.ts` call the Kinorium integration in `src/helpers/kinorium.ts`.
-6. Search results become Telegram inline articles; expected no-result and API-error states should remain user-friendly.
+5. Inline queries registered through `src/helpers/bot.ts` first consult `src/helpers/searchCache.ts`, then call the Kinorium integration in `src/helpers/kinorium.ts` on a miss. The integration decodes HTML entities, tolerates missing original titles, and discards records with no usable title.
+6. `src/helpers/moviePresentation.ts` formats localized linked titles, years, and original titles; `src/helpers/inlineResult.ts` creates query-specific Telegram result IDs.
+7. Search results become Telegram inline articles; expected no-result and API-error states remain user-friendly and uncached.
 
 ## Key Files
 
@@ -20,6 +21,8 @@ The application is a strict TypeScript Telegram bot built with grammY:
 - `src/models/Context.ts` — defines bot-specific context properties and helpers.
 - `src/models/User.ts` — stores the user's language preference.
 - `src/menus/language.ts` — renders the language picker.
+- `src/helpers/searchCache.ts` — validates and stores successful searches in Cloudflare's regional Cache API.
+- `src/helpers/moviePresentation.ts` — builds escaped Telegram HTML and localized Kinorium links.
 - `.github/workflows/workflow.yml` — compiles and lints pull requests.
 
 ## Local Development
@@ -41,10 +44,14 @@ Wrangler resolves the `@/` source alias during bundling. Regenerate `worker-conf
 
 Handle expected failures explicitly. Inline queries should return useful no-result or error responses rather than leaking exceptions. Log actionable context, but never tokens, API keys, database URLs, or full Kinorium URLs containing credentials. Keep Telegram titles, descriptions, and result payloads compact.
 
+Preserve the cache policy unless a product requirement changes it deliberately: Telegram answers use a five-second personal cache, while Cloudflare caches only successful, non-empty searches for 300 seconds. Cache keys must hash the language and trimmed query and must never contain an API key or readable search. Cache reads must validate stored JSON; cache failures must fall back to Kinorium, and writes belong in `ExecutionContext.waitUntil()`.
+
+The bot assigns query-specific Telegram result IDs, but Telegram thumbnail URLs still load asynchronously in the client and a brief old-poster transition can occur. Do not add a poster proxy without measurements showing that its additional Worker traffic and complexity provide a useful improvement.
+
 Use `camelCase` for functions and ordinary module filenames, `PascalCase` for classes and types, and `UPPER_SNAKE_CASE` for constants. Each locale YAML file must retain a top-level `name` field used by the language menu.
 
 ## Verification Strategy
 
 For pure mapping, validation, and error handling, use pragmatic TDD: write the smallest failing Vitest case, implement only enough to pass, then refactor. Repository tests use Cloudflare's Vitest integration so D1 and Worker behavior execute in the target runtime.
 
-Every code change must pass `yarn lint`, `yarn test`, and `yarn build`. Manually verify affected Telegram commands or inline queries after a preview deployment, including empty input, no results, upstream errors, and timeouts when relevant.
+Every code change must pass `yarn lint`, `yarn test`, and `yarn build`. Manually verify affected Telegram commands or inline queries after a preview deployment, including empty input, no results, upstream errors, and timeouts when relevant. For cache changes, cover hits, misses, language-specific keys, TTLs, invalid cached data, and the rule that empty/error results are not stored.

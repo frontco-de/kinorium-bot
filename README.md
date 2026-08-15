@@ -1,6 +1,6 @@
 # Kinorium Bot
 
-A multilingual Telegram bot for finding movies and TV shows through the Kinorium API. The bot works in Telegram inline mode and returns up to ten matching titles with release information, poster thumbnails when available, and links to Kinorium.
+A multilingual Telegram bot for finding movies and TV shows through the Kinorium API. The bot works in Telegram inline mode and returns up to ten matching titles with localized names and links, release information, and poster thumbnails when available.
 
 The project is written in strict TypeScript and uses [grammY](https://grammy.dev), a Cloudflare Worker webhook, D1 persistence, and YAML localization for English, Russian, and Ukrainian.
 
@@ -47,10 +47,18 @@ In any Telegram chat, type the bot username followed by a movie or series title:
 @your_bot_username Dune 2021
 ```
 
-Select a result to send its title, type, release year, and Kinorium link. The bot also supports:
+Select a result to send a compact localized message such as:
+
+```text
+TV series «Futurama» (1999–…, Futurama)
+```
+
+The quoted title links to the English, Russian, or Ukrainian Kinorium site selected by the user's bot language. A different original title follows the year; an ellipsis marks an ongoing series. The bot also supports:
 
 - `/start` and `/help` — show help.
 - `/language` — choose the interface language.
+
+Telegram privately caches completed inline answers for five seconds. The Worker separately caches successful, non-empty Kinorium searches for five minutes, so a successful answer can be up to five minutes old. Empty results and upstream errors remain uncached, so temporary failures and newly indexed titles are not retained as misses.
 
 ## Development Commands
 

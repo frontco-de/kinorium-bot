@@ -25,4 +25,4 @@ Pull requests must contain a concise bullet summary, linked issue when applicabl
 
 ## Security
 
-Keep `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET` in `.env` locally and Cloudflare secrets remotely. Do not also create `.dev.vars`. Never log secrets, Telegram updates, search queries, or authenticated URLs. Keep D1 access parameterized and document binding changes in `wrangler.jsonc`, `.env.example`, and `README.md`.
+Keep `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET` in `.env` locally and Cloudflare secrets remotely. Do not also create `.dev.vars`. Never log secrets, Telegram updates, search queries, or authenticated URLs. Never put API keys or readable searches in cache keys, and never cache Kinorium errors or empty results; see [docs/contributor-guide.md](docs/contributor-guide.md). Keep D1 access parameterized and document binding changes in `wrangler.jsonc`, `.env.example`, and `README.md`.
