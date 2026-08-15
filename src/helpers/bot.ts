@@ -3,12 +3,13 @@ import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import localize from '@/helpers/i18n'
 import { searchMoviesDetailed } from '@/helpers/kinorium'
+import { buildMoviePresentation } from '@/helpers/moviePresentation'
 import { registerLanguageMenu } from '@/menus/language'
 import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
 import Context from '@/models/Context'
 
-const INLINE_QUERY_CACHE_TIME_SECONDS = 600
+const INLINE_QUERY_CACHE_TIME_SECONDS = 0
 
 function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
   // When user types: @YourBot hello
@@ -18,11 +19,18 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
 
       // If query is empty, return empty results without making API request
       if (!searchText.trim()) {
-        await ctx.answerInlineQuery([], { cache_time: 30 })
+        await ctx.answerInlineQuery([], {
+          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+          is_personal: true,
+        })
         return
       }
 
-      const searchResult = await searchMoviesDetailed(searchText, apiKey)
+      const searchResult = await searchMoviesDetailed(
+        searchText,
+        apiKey,
+        ctx.dbuser.language
+      )
 
       if (searchResult.kind === 'error') {
         const title = ctx.i18n.t('inline.api_error_title')
@@ -31,7 +39,8 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
         await ctx.answerInlineQuery(
           [R.article('api-error', title, { description }).text(text)],
           {
-            cache_time: 30,
+            cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+            is_personal: true,
           }
         )
         return
@@ -48,40 +57,34 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
         await ctx.answerInlineQuery(
           [R.article('no-results', title, { description }).text(text)],
           {
-            cache_time: 30,
+            cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+            is_personal: true,
           }
         )
         return
       }
 
       const movies = searchResult.movies
-      const hasMovies = movies.length > 0
+      const labels = {
+        movie: ctx.i18n.t('inline.movie'),
+        tvSeries: ctx.i18n.t('inline.tv_series'),
+        present: ctx.i18n.t('inline.present'),
+      }
 
       // Create results based on movies
       const results = movies.slice(0, 10).map((movie) => {
-        const title = movie.name_orig || movie.name
-        const typeLabel = movie.isSerial ? 'TV-show' : movie.mixtype
-        const hasSerialYearRange =
-          Boolean(movie.isSerial) &&
-          typeof movie.year_serial_b === 'number' &&
-          typeof movie.year_serial_e === 'number'
-        const yearText = hasSerialYearRange
-          ? `${movie.year_serial_b}—${movie.year_serial_e}`
-          : String(movie.year || movie.year_serial_b || '')
-        const description = `${typeLabel}${yearText ? ` (${yearText})` : ''}`
-        const text = `Title: ${title}\nOriginal: ${movie.name}\nType: ${typeLabel}${
-          yearText
-            ? `\n${hasSerialYearRange ? 'Years' : 'Year'}: ${yearText}`
-            : ''
-        }`
-        const textWithLink = `${text}\nLink: ${movie.url}`
+        const presentation = buildMoviePresentation(
+          movie,
+          ctx.dbuser.language,
+          labels
+        )
 
         // Build article options
         const articleOptions: {
           description: string
           thumbnail_url?: string
         } = {
-          description,
+          description: presentation.description,
         }
 
         // Add poster thumbnail if available
@@ -91,9 +94,11 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
           articleOptions.thumbnail_url = thumbnailUrl
         }
 
-        return R.article(`movie-${movie.id}`, title, articleOptions).text(
-          textWithLink
-        )
+        return R.article(
+          `movie-${movie.id}`,
+          presentation.title,
+          articleOptions
+        ).text(presentation.message, { parse_mode: 'HTML' })
       })
 
       // If no movies found, provide a default result
@@ -109,12 +114,19 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
       }
 
       await ctx.answerInlineQuery(results, {
-        cache_time: hasMovies ? INLINE_QUERY_CACHE_TIME_SECONDS : 30,
+        cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+        is_personal: true,
       })
     } catch (error) {
-      console.error('Error handling inline query:', error)
+      const errorType = error instanceof Error ? error.name : 'UnknownError'
+      console.error(
+        JSON.stringify({ event: 'inline_query_failed', error: errorType })
+      )
       // Send empty results on error
-      await ctx.answerInlineQuery([], { cache_time: 30 })
+      await ctx.answerInlineQuery([], {
+        cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+        is_personal: true,
+      })
     }
   })
 }

@@ -9,7 +9,7 @@ describe('Kinorium search', () => {
           {
             id: 123,
             mixtype: 'movie',
-            name: 'Дюна',
+            name: 'Дюна&#160;2021',
             name_orig: 'Dune',
             year: 2021,
           },
@@ -18,16 +18,22 @@ describe('Kinorium search', () => {
     )
 
     await expect(
-      searchMoviesDetailed('Dune 2021', 'secret', fetcher)
+      searchMoviesDetailed('Dune 2021', 'secret', 'uk', fetcher)
     ).resolves.toMatchObject({
       kind: 'ok',
-      movies: [{ id: 123, url: 'https://kinorium.com/123/' }],
+      movies: [
+        {
+          id: 123,
+          name: 'Дюна 2021',
+          url: 'https://ua.kinorium.com/123/',
+        },
+      ],
     })
     expect(fetcher).toHaveBeenCalledOnce()
     const call = fetcher.mock.calls[0]
     if (!call) throw new Error('Expected Kinorium fetch call')
     expect(call[0]).toBe(
-      'https://db.kinorium.com/search/?apikey=secret&q=Dune%202021'
+      'https://db.kinorium.com/search/?apikey=secret&q=Dune%202021&lng=ua'
     )
     expect(call[1]?.signal).toBeInstanceOf(AbortSignal)
   })
@@ -40,7 +46,7 @@ describe('Kinorium search', () => {
       )
 
     await expect(
-      searchMoviesDetailed('missing', 'secret', fetcher)
+      searchMoviesDetailed('missing', 'secret', 'en', fetcher)
     ).resolves.toEqual({ kind: 'no_results', movies: [] })
   })
 
@@ -50,7 +56,7 @@ describe('Kinorium search', () => {
       .mockResolvedValue(Response.json({ unexpected: true }))
 
     await expect(
-      searchMoviesDetailed('Dune', 'secret', fetcher)
+      searchMoviesDetailed('Dune', 'secret', 'en', fetcher)
     ).resolves.toEqual({ kind: 'error', movies: [] })
   })
 })

@@ -1,3 +1,5 @@
+import { type SupportedLocale } from '@/helpers/locales'
+
 export interface KinoriumMovie {
   id: number
   mixtype: string
@@ -21,6 +23,19 @@ interface KinoriumResponse {
 }
 
 const REQUEST_TIMEOUT_MS = 7_000
+const KINORIUM_LOCALES: Record<SupportedLocale, 'en' | 'ru' | 'ua'> = {
+  en: 'en',
+  ru: 'ru',
+  uk: 'ua',
+}
+const HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  lt: '<',
+  nbsp: ' ',
+  quot: '"',
+}
 type Fetcher = (
   input: RequestInfo | URL,
   init?: RequestInit
@@ -40,16 +55,48 @@ async function fetchWithTimeout(
   }
 }
 
-export function getKinoriumMovieUrl(id: number | string) {
-  return `https://kinorium.com/${id}/`
+function decodeHtmlEntities(value: string): string {
+  return value.replace(
+    /&(#(?:x[\da-f]+|\d+)|[a-z]+);/gi,
+    (entity, code: string) => {
+      if (!code.startsWith('#')) {
+        return HTML_ENTITIES[code.toLowerCase()] ?? entity
+      }
+
+      const hexadecimal = code[1]?.toLowerCase() === 'x'
+      const codePoint = Number.parseInt(
+        code.slice(hexadecimal ? 2 : 1),
+        hexadecimal ? 16 : 10
+      )
+      if (
+        !Number.isInteger(codePoint) ||
+        codePoint < 0 ||
+        codePoint > 0x10ffff ||
+        (codePoint >= 0xd800 && codePoint <= 0xdfff)
+      ) {
+        return entity
+      }
+      return String.fromCodePoint(codePoint).replace(/\u00a0/g, ' ')
+    }
+  )
+}
+
+export function getKinoriumMovieUrl(
+  id: number | string,
+  language: SupportedLocale
+) {
+  return `https://${KINORIUM_LOCALES[language]}.kinorium.com/${id}/`
 }
 
 export function addKinoriumMovieUrls(
-  movies: KinoriumMovie[]
+  movies: KinoriumMovie[],
+  language: SupportedLocale
 ): KinoriumMovieWithUrl[] {
   return movies.map((movie) => ({
     ...movie,
-    url: getKinoriumMovieUrl(movie.id),
+    name: decodeHtmlEntities(movie.name),
+    name_orig: decodeHtmlEntities(movie.name_orig),
+    url: getKinoriumMovieUrl(movie.id, language),
   }))
 }
 
@@ -83,6 +130,7 @@ function isNoResultsError(
 export async function searchMoviesDetailed(
   query: string,
   apiKey: string,
+  language: SupportedLocale,
   fetcher: Fetcher = fetch
 ): Promise<KinoriumSearchResult> {
   try {
@@ -92,7 +140,9 @@ export async function searchMoviesDetailed(
     const encodedQuery = encodeURIComponent(query)
 
     // Build the API URL
-    const url = `https://db.kinorium.com/search/?apikey=${cleanApiKey}&q=${encodedQuery}`
+    const encodedApiKey = encodeURIComponent(cleanApiKey)
+    const kinoriumLocale = KINORIUM_LOCALES[language]
+    const url = `https://db.kinorium.com/search/?apikey=${encodedApiKey}&q=${encodedQuery}&lng=${kinoriumLocale}`
 
     const response = await fetchWithTimeout(fetcher, url)
 
@@ -116,11 +166,14 @@ export async function searchMoviesDetailed(
     if (!Array.isArray(result.movie_list)) {
       throw new Error('Kinorium response is missing movie_list')
     }
-    return { kind: 'ok', movies: addKinoriumMovieUrls(result.movie_list) }
+    return {
+      kind: 'ok',
+      movies: addKinoriumMovieUrls(result.movie_list, language),
+    }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorType = error instanceof Error ? error.name : 'UnknownError'
     console.error(
-      JSON.stringify({ event: 'kinorium_search_failed', error: errorMessage })
+      JSON.stringify({ event: 'kinorium_search_failed', error: errorType })
     )
     return { kind: 'error', movies: [] }
   }
@@ -129,9 +182,10 @@ export async function searchMoviesDetailed(
 export async function searchMovies(
   query: string,
   apiKey: string,
+  language: SupportedLocale,
   fetcher: Fetcher = fetch
 ): Promise<KinoriumMovieWithUrl[]> {
-  const result = await searchMoviesDetailed(query, apiKey, fetcher)
+  const result = await searchMoviesDetailed(query, apiKey, language, fetcher)
   return result.movies
 }
 
