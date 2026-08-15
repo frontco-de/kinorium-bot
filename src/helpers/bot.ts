@@ -6,33 +6,93 @@ import localize from '@/helpers/i18n'
 import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
 import {
+  type KinoriumMovieWithUrl,
   type KinoriumSearchCache,
   searchMoviesDetailed,
 } from '@/helpers/kinorium'
-import { buildMoviePresentation } from '@/helpers/moviePresentation'
+import { type SupportedLocale } from '@/helpers/locales'
+import logError from '@/helpers/logging'
+import {
+  buildMoviePresentation,
+  type MovieLabels,
+} from '@/helpers/moviePresentation'
+import isWithinRateLimit from '@/helpers/rateLimit'
 import { registerLanguageMenu } from '@/menus/language'
 import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
+import ignoreUnhandledUpdates from '@/middlewares/ignoreUnhandledUpdates'
 import Context from '@/models/Context'
 
 const INLINE_QUERY_CACHE_TIME_SECONDS = 5
+const INLINE_RESULT_LIMIT = 10
+const POSTER_THUMBNAIL_SIZE = '200'
+
+const commandHandlers = {
+  help: sendHelp,
+  language: handleLanguage,
+  start: sendStart,
+}
+
+type InlineResult = ReturnType<typeof buildInlineErrorResult>
+
+function answerInlineQuery(ctx: Context, results: InlineResult[]) {
+  return ctx.answerInlineQuery(results, {
+    cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+    is_personal: true,
+  })
+}
+
+function buildNoResultsResult(ctx: Context, query: string): InlineResult {
+  return R.article('no-results', ctx.i18n.t('inline.no_results_title'), {
+    description: ctx.i18n.t('inline.no_results_description', { query }),
+  }).text(ctx.i18n.t('inline.no_results_message', { query }))
+}
+
+function buildMovieResult(
+  movie: KinoriumMovieWithUrl,
+  language: SupportedLocale,
+  labels: MovieLabels,
+  inlineQueryId: string
+): InlineResult {
+  const presentation = buildMoviePresentation(movie, language, labels)
+  const articleOptions: { description: string; thumbnail_url?: string } = {
+    description: presentation.description,
+  }
+  if (movie.poster) {
+    articleOptions.thumbnail_url = movie.poster.replace(
+      '{$image_size_id}',
+      POSTER_THUMBNAIL_SIZE
+    )
+  }
+
+  return R.article(
+    buildInlineMovieResultId(inlineQueryId, movie.id),
+    presentation.title,
+    articleOptions
+  ).text(presentation.message, { parse_mode: 'HTML' })
+}
 
 function registerInlineQueryHandlers(
   bot: Bot<Context>,
   apiKey: string,
+  rateLimiter: RateLimit,
   searchCache: KinoriumSearchCache
 ): void {
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
     try {
-      const searchText = ctx.inlineQuery.query || ''
+      const searchText = ctx.inlineQuery.query.trim()
 
-      // If query is empty, return empty results without making API request
-      if (!searchText.trim()) {
-        await ctx.answerInlineQuery([], {
-          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-          is_personal: true,
-        })
+      // Empty queries never reach Kinorium.
+      if (searchText.length === 0) {
+        await answerInlineQuery(ctx, [])
+        return
+      }
+
+      if (!(await isWithinRateLimit(rateLimiter, 'inline', ctx.from?.id))) {
+        await answerInlineQuery(ctx, [
+          buildInlineErrorResult(ctx.i18n, 'rate_limit'),
+        ])
         return
       }
 
@@ -45,95 +105,34 @@ function registerInlineQueryHandlers(
       )
 
       if (searchResult.kind === 'error') {
-        await ctx.answerInlineQuery([buildInlineErrorResult(ctx.i18n, 'api')], {
-          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-          is_personal: true,
-        })
+        await answerInlineQuery(ctx, [buildInlineErrorResult(ctx.i18n, 'api')])
         return
       }
 
-      if (searchResult.kind === 'no_results') {
-        const title = ctx.i18n.t('inline.no_results_title')
-        const description = ctx.i18n.t('inline.no_results_description', {
-          query: searchText,
-        })
-        const text = ctx.i18n.t('inline.no_results_message', {
-          query: searchText,
-        })
-        await ctx.answerInlineQuery(
-          [R.article('no-results', title, { description }).text(text)],
-          {
-            cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-            is_personal: true,
-          }
-        )
-        return
-      }
-
-      const movies = searchResult.movies
       const labels = {
         movie: ctx.i18n.t('inline.movie'),
         tvSeries: ctx.i18n.t('inline.tv_series'),
       }
-
-      // Create results based on movies
-      const results = movies.slice(0, 10).map((movie) => {
-        const presentation = buildMoviePresentation(
-          movie,
-          ctx.dbuser.language,
-          labels
+      const results = searchResult.movies
+        .slice(0, INLINE_RESULT_LIMIT)
+        .map((movie) =>
+          buildMovieResult(
+            movie,
+            ctx.dbuser.language,
+            labels,
+            ctx.inlineQuery.id
+          )
         )
 
-        // Build article options
-        const articleOptions: {
-          description: string
-          thumbnail_url?: string
-        } = {
-          description: presentation.description,
-        }
-
-        // Add poster thumbnail if available
-        if (movie.poster) {
-          // Replace {$image_size_id} with actual size (200px is good for thumbnails)
-          const thumbnailUrl = movie.poster.replace('{$image_size_id}', '200')
-          articleOptions.thumbnail_url = thumbnailUrl
-        }
-
-        return R.article(
-          buildInlineMovieResultId(ctx.inlineQuery.id, movie.id),
-          presentation.title,
-          articleOptions
-        ).text(presentation.message, { parse_mode: 'HTML' })
-      })
-
-      // If no movies found, provide a default result
-      if (results.length === 0) {
-        const title = ctx.i18n.t('inline.no_results_title')
-        const description = ctx.i18n.t('inline.no_results_description', {
-          query: searchText,
-        })
-        const text = ctx.i18n.t('inline.no_results_message', {
-          query: searchText,
-        })
-        results.push(R.article('no-results', title, { description }).text(text))
-      }
-
-      await ctx.answerInlineQuery(results, {
-        cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-        is_personal: true,
-      })
+      await answerInlineQuery(
+        ctx,
+        results.length > 0 ? results : [buildNoResultsResult(ctx, searchText)]
+      )
     } catch (error) {
-      const errorType = error instanceof Error ? error.name : 'UnknownError'
-      console.error(
-        JSON.stringify({ event: 'inline_query_failed', error: errorType })
-      )
-      await ctx.answerInlineQuery(
-        [buildInlineErrorResult(ctx.i18n, 'unexpected')],
-        {
-          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-          is_personal: true,
-        }
-      )
+      logError('inline_query_failed', error)
+      await answerInlineQuery(ctx, [
+        buildInlineErrorResult(ctx.i18n, 'unexpected'),
+      ])
     }
   })
 }
@@ -147,21 +146,24 @@ export default function createBot(
     botInfo: env.BOT_INFO,
   })
 
+  bot.use(ignoreUnhandledUpdates(Object.keys(commandHandlers)))
   bot.use(attachUser(env.DB))
   bot.use(localize)
   bot.use(configureI18n)
   registerLanguageMenu(bot)
-  registerInlineQueryHandlers(bot, env.APIKEY, searchCache)
-  bot.command('start', sendStart)
-  bot.command('help', sendHelp)
-  bot.command('language', handleLanguage)
+  registerInlineQueryHandlers(
+    bot,
+    env.APIKEY,
+    env.INLINE_RATE_LIMITER,
+    searchCache
+  )
+  for (const [command, handler] of Object.entries(commandHandlers)) {
+    bot.command(command, handler)
+  }
   bot.catch((error) => {
-    const message =
-      error.error instanceof Error ? error.error.message : String(error.error)
-    console.error(
-      JSON.stringify({ event: 'telegram_update_failed', error: message })
-    )
-    throw error
+    // Swallowed on purpose: rethrowing makes the webhook answer 500, and
+    // Telegram then redelivers the same update ahead of every later one.
+    logError('telegram_update_failed', error.error)
   })
 
   return bot

@@ -1,5 +1,6 @@
 import { Bot, InlineKeyboard } from 'grammy/web'
 import { isSupportedLocale, locales } from '@/helpers/locales'
+import isMenuOwner from '@/menus/ownership'
 import Context from '@/models/Context'
 import { updateUserLanguage } from '@/models/User'
 
@@ -17,6 +18,13 @@ export function registerLanguageMenu(bot: Bot<Context>): void {
     const languageCode = ctx.match[1]
     if (!isSupportedLocale(languageCode)) {
       await ctx.answerCallbackQuery()
+      return
+    }
+    if (!isMenuOwner(ctx)) {
+      await ctx.answerCallbackQuery({
+        text: ctx.i18n.t('language_menu_not_yours'),
+        show_alert: true,
+      })
       return
     }
 

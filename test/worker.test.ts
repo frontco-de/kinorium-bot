@@ -1,7 +1,27 @@
-import { SELF } from 'cloudflare:test'
-import { env } from 'cloudflare:workers'
+import {
+  createExecutionContext,
+  env,
+  SELF,
+  waitOnExecutionContext,
+} from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { secretsMatch } from '@/app'
+import worker, { secretsMatch } from '@/app'
+
+type IncomingRequest = Parameters<typeof worker.fetch>[0]
+
+function webhookRequest(secret?: string): IncomingRequest {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  if (secret !== undefined) {
+    headers['X-Telegram-Bot-Api-Secret-Token'] = secret
+  }
+  return new Request('https://example.com/webhook', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ update_id: 0 }),
+  })
+}
 
 describe('Worker HTTP interface', () => {
   it('compares webhook secrets without exposing their length', async () => {
@@ -34,6 +54,32 @@ describe('Worker HTTP interface', () => {
       method: 'POST',
     })
     expect(response.status).toBe(401)
+  })
+
+  it('rejects a webhook carrying the wrong secret', async () => {
+    const executionContext = createExecutionContext()
+    const response = await worker.fetch(
+      webhookRequest('not-the-webhook-secret'),
+      env,
+      executionContext
+    )
+    await waitOnExecutionContext(executionContext)
+
+    expect(response.status).toBe(401)
+  })
+
+  it('refuses to authenticate when no secret is configured', async () => {
+    const executionContext = createExecutionContext()
+    const response = await worker.fetch(
+      // A forgotten `wrangler secret` must not turn the literal "undefined"
+      // into a valid credential.
+      webhookRequest('undefined'),
+      { ...env, WEBHOOK_SECRET: undefined as unknown as string },
+      executionContext
+    )
+    await waitOnExecutionContext(executionContext)
+
+    expect(response.status).toBe(500)
   })
 
   it('accepts a webhook with the configured secret', async () => {

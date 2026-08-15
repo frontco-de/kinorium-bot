@@ -66,6 +66,33 @@ const expectedResults: ExpectedErrorResult[] = [
     description: 'Не вдалося виконати пошук',
     message: 'Під час пошуку щось пішло не так. Спробуйте ще раз за хвилину.',
   },
+  {
+    locale: 'en',
+    kind: 'rate_limit',
+    id: 'rate-limit-error',
+    title: 'Too many searches',
+    description: 'Please slow down for a moment',
+    message:
+      'Too many searches in a short time. Please wait a moment and try again.',
+  },
+  {
+    locale: 'ru',
+    kind: 'rate_limit',
+    id: 'rate-limit-error',
+    title: 'Слишком много запросов',
+    description: 'Пожалуйста, немного подождите',
+    message:
+      'Слишком много запросов за короткое время. Подождите немного и попробуйте снова.',
+  },
+  {
+    locale: 'uk',
+    kind: 'rate_limit',
+    id: 'rate-limit-error',
+    title: 'Занадто багато запитів',
+    description: 'Будь ласка, трохи зачекайте',
+    message:
+      'Занадто багато запитів за короткий час. Зачекайте трохи й спробуйте знову.',
+  },
 ]
 
 describe('inline error result', () => {

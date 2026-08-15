@@ -136,4 +136,93 @@ describe('Kinorium search', () => {
     ).resolves.toEqual({ kind: 'error', movies: [] })
     expect(setCache).not.toHaveBeenCalled()
   })
+
+  it('normalizes loosely typed records and drops unusable ones', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        movie_list: [
+          {
+            id: '123',
+            mixtype: 'tvseries',
+            name: 'Futurama',
+            name_orig: 'Futurama',
+            year: '1999',
+            year_serial_b: '1999',
+            isSerial: 1,
+            poster: 'https://kinorium.com/{$image_size_id}/poster.jpg',
+          },
+          // No usable title.
+          { id: 124, mixtype: 'movie' },
+          // No usable id.
+          { id: 'not-a-number', name: 'Broken' },
+          // Not a record.
+          'nonsense',
+        ],
+      })
+    )
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: vi.fn(),
+    }
+
+    await expect(
+      searchMoviesDetailed('Futurama', 'secret', 'en', fetcher, searchCache)
+    ).resolves.toEqual({
+      kind: 'ok',
+      movies: [
+        {
+          id: 123,
+          mixtype: 'tvseries',
+          name: 'Futurama',
+          name_orig: 'Futurama',
+          url: 'https://en.kinorium.com/123/',
+          year: 1999,
+          year_serial_b: 1999,
+          year_serial_e: undefined,
+          isSerial: true,
+          poster: 'https://kinorium.com/{$image_size_id}/poster.jpg',
+        },
+      ],
+    })
+  })
+
+  it('drops poster URLs that Telegram must not fetch', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        movie_list: [
+          {
+            id: 125,
+            mixtype: 'movie',
+            name: 'Dune',
+            name_orig: 'Dune',
+            poster: 'javascript:alert(1)',
+          },
+          {
+            id: 126,
+            mixtype: 'movie',
+            name: 'Dune II',
+            name_orig: 'Dune II',
+            poster: { unexpected: true },
+          },
+        ],
+      })
+    )
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: vi.fn(),
+    }
+
+    const result = await searchMoviesDetailed(
+      'Dune',
+      'secret',
+      'en',
+      fetcher,
+      searchCache
+    )
+
+    expect(result.movies.map((movie) => movie.poster)).toEqual([
+      undefined,
+      undefined,
+    ])
+  })
 })

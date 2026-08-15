@@ -18,6 +18,7 @@ help: |
   /help — показати цю інструкцію
 language: Будь ласка, оберіть мову.
 language_selected: <b>Цей бот</b> тепер говорить українською.
+language_menu_not_yours: Це меню мови належить іншому користувачу. Надішліть /language, щоб відкрити своє.
 inline:
   movie: 'Фільм'
   tv_series: 'Серіал'
@@ -27,6 +28,9 @@ inline:
   api_error_title: 'Сервіс недоступний'
   api_error_description: 'Немає відповіді від Kinorium'
   api_error_message: 'Kinorium тимчасово недоступний. Спробуйте ще раз за хвилину.'
+  rate_limit_error_title: 'Занадто багато запитів'
+  rate_limit_error_description: 'Будь ласка, трохи зачекайте'
+  rate_limit_error_message: 'Занадто багато запитів за короткий час. Зачекайте трохи й спробуйте знову.'
   unexpected_error_title: 'Щось пішло не так'
   unexpected_error_description: 'Не вдалося виконати пошук'
   unexpected_error_message: 'Під час пошуку щось пішло не так. Спробуйте ще раз за хвилину.'

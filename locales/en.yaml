@@ -18,6 +18,7 @@ help: |
   /help — show these instructions
 language: Please, select the language.
 language_selected: <b>This bot</b> now speaks English.
+language_menu_not_yours: This language menu belongs to another user. Send /language to pick your own.
 inline:
   movie: 'Movie'
   tv_series: 'TV series'
@@ -27,6 +28,9 @@ inline:
   api_error_title: 'Service unavailable'
   api_error_description: "Can't reach Kinorium"
   api_error_message: 'Kinorium is temporarily unavailable. Please try again in a minute.'
+  rate_limit_error_title: 'Too many searches'
+  rate_limit_error_description: 'Please slow down for a moment'
+  rate_limit_error_message: 'Too many searches in a short time. Please wait a moment and try again.'
   unexpected_error_title: 'Something went wrong'
   unexpected_error_description: 'The search could not be completed'
   unexpected_error_message: 'Something went wrong while searching. Please try again in a moment.'

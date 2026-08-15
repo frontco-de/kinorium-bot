@@ -1,7 +1,7 @@
 import { InlineQueryResultBuilder as R } from 'grammy/web'
 import { type Localizer } from '@/helpers/i18n'
 
-export type InlineErrorKind = 'api' | 'unexpected'
+export type InlineErrorKind = 'api' | 'rate_limit' | 'unexpected'
 
 const ERROR_RESULT_CONFIG: Record<
   InlineErrorKind,
@@ -10,6 +10,10 @@ const ERROR_RESULT_CONFIG: Record<
   api: {
     id: 'api-error',
     translationKey: 'inline.api_error',
+  },
+  rate_limit: {
+    id: 'rate-limit-error',
+    translationKey: 'inline.rate_limit_error',
   },
   unexpected: {
     id: 'unexpected-error',

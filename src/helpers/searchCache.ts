@@ -1,9 +1,10 @@
 import {
-  type KinoriumMovieWithUrl,
+  isKinoriumMovieWithUrl,
   type KinoriumSearchCache,
   type KinoriumSearchResult,
 } from '@/helpers/kinorium'
 import { type SupportedLocale } from '@/helpers/locales'
+import logError from '@/helpers/logging'
 
 const CACHE_TTL_SECONDS = 5 * 60
 const encoder = new TextEncoder()
@@ -12,43 +13,16 @@ type CacheStore = Pick<Cache, 'match' | 'put'>
 type BackgroundContext = Pick<ExecutionContext, 'waitUntil'>
 type SuccessfulSearchResult = Extract<KinoriumSearchResult, { kind: 'ok' }>
 
-function isOptionalNumber(value: unknown): value is number | undefined {
-  return value === undefined || typeof value === 'number'
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isMovie(value: unknown): value is KinoriumMovieWithUrl {
-  if (!isRecord(value)) return false
-  return (
-    typeof value.id === 'number' &&
-    typeof value.mixtype === 'string' &&
-    typeof value.name === 'string' &&
-    typeof value.name_orig === 'string' &&
-    typeof value.url === 'string' &&
-    isOptionalNumber(value.year) &&
-    isOptionalNumber(value.year_serial_b) &&
-    isOptionalNumber(value.year_serial_e) &&
-    (value.isSerial === undefined || typeof value.isSerial === 'boolean') &&
-    (value.poster === undefined || typeof value.poster === 'string')
-  )
-}
-
 function isSuccessfulSearchResult(
   value: unknown
 ): value is SuccessfulSearchResult {
-  if (!isRecord(value)) return false
+  if (typeof value !== 'object' || value === null) return false
+  const result = value as Record<string, unknown>
   return (
-    value.kind === 'ok' &&
-    Array.isArray(value.movies) &&
-    value.movies.every(isMovie)
+    result.kind === 'ok' &&
+    Array.isArray(result.movies) &&
+    result.movies.every(isKinoriumMovieWithUrl)
   )
-}
-
-function errorType(error: unknown): string {
-  return error instanceof Error ? error.name : 'UnknownError'
 }
 
 async function hashSearch(query: string, language: SupportedLocale) {
@@ -81,12 +55,7 @@ export default function createSearchCache(
       const value: unknown = await response.json()
       return isSuccessfulSearchResult(value) ? value : undefined
     } catch (error) {
-      console.error(
-        JSON.stringify({
-          event: 'kinorium_search_cache_read_failed',
-          error: errorType(error),
-        })
-      )
+      logError('kinorium_search_cache_read_failed', error)
       return undefined
     }
   }
@@ -104,13 +73,8 @@ export default function createSearchCache(
       await cache.put(key, response)
     }
     ctx.waitUntil(
-      write().catch((error) => {
-        console.error(
-          JSON.stringify({
-            event: 'kinorium_search_cache_write_failed',
-            error: errorType(error),
-          })
-        )
+      write().catch((error: unknown) => {
+        logError('kinorium_search_cache_write_failed', error)
       })
     )
   }
