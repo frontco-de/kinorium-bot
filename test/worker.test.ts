@@ -1,8 +1,14 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
+import { secretsMatch } from '@/app'
 
 describe('Worker HTTP interface', () => {
+  it('compares webhook secrets without exposing their length', async () => {
+    await expect(secretsMatch('secret', 'secret')).resolves.toBe(true)
+    await expect(secretsMatch('short', 'longer-secret')).resolves.toBe(false)
+  })
+
   it('reports health without exposing secrets', async () => {
     const response = await SELF.fetch('https://example.com/health')
 
