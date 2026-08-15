@@ -21,6 +21,8 @@ Install with `yarn`, regenerate bindings with `yarn types` after Wrangler change
 
 Use Conventional Commits: `type(scope): imperative summary`, for example `fix(inline): handle empty results`. Use matching kebab-case branch names such as `feat/movie-posters`, `fix/api-timeout`, `refactor/bot-context`, or `chore/update-deps`.
 
+Create releases only from a clean, synchronized `main` branch. Preview the inferred SemVer bump with `yarn release:dry-run`, then follow [docs/RELEASE.md](docs/RELEASE.md). Release commands create a local commit and tag but never authorize pushing them automatically.
+
 Pull requests must contain a concise bullet summary, linked issue when applicable, verification steps, and screenshots for visible Telegram changes. Keep unrelated changes separate and ensure CI compile and lint checks pass.
 
 ## Security

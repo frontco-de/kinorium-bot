@@ -69,8 +69,13 @@ Telegram privately caches completed inline answers for five seconds. The Worker 
 - `yarn build` — create a local Wrangler deployment bundle without publishing it.
 - `yarn types` — regenerate Worker binding and runtime types after config changes.
 - `yarn validate` — run every check required before deployment.
+- `yarn release:dry-run` — preview the next SemVer release and changelog.
 
 See the [contributor reference](docs/contributor-guide.md) for architecture and verification guidance.
+
+## Releases
+
+Releases derive their version and changelog from Conventional Commits. See [docs/RELEASE.md](docs/RELEASE.md) for the initial tag decision and release procedure.
 
 ## Deployment
 
