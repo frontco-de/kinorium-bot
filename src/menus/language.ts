@@ -1,26 +1,11 @@
 import { Menu } from '@grammyjs/menu'
-import { cwd } from 'process'
-import { load } from 'js-yaml'
-import { readFileSync, readdirSync } from 'fs'
-import { resolve } from 'path'
+import { locales, type SupportedLocale } from '@/helpers/locales'
 import Context from '@/models/Context'
+import { updateUserLanguage } from '@/models/User'
 
-interface YamlWithName {
-  name: string
-}
-
-const localeFilePaths = readdirSync(resolve(cwd(), 'locales'))
-
-const localeFile = (path: string) => {
-  return load(
-    readFileSync(resolve(cwd(), 'locales', path), 'utf8')
-  ) as YamlWithName
-}
-
-const setLanguage = (languageCode: string) => async (ctx: Context) => {
-  ctx.dbuser.language = languageCode
-  await ctx.dbuser.save()
-  ctx.i18n.locale(languageCode)
+const setLanguage = (languageCode: SupportedLocale) => async (ctx: Context) => {
+  ctx.dbuser = await updateUserLanguage(ctx.db, ctx.dbuser.id, languageCode)
+  ctx.i18n.locale(ctx.dbuser.language)
   return ctx.editMessageText(ctx.i18n.t('language_selected'), {
     parse_mode: 'HTML',
     reply_markup: undefined,
@@ -29,10 +14,8 @@ const setLanguage = (languageCode: string) => async (ctx: Context) => {
 
 const languageMenu = new Menu<Context>('language')
 
-localeFilePaths.forEach((localeFilePath, index) => {
-  const localeCode = localeFilePath.split('.')[0]
-  const localeName = localeFile(localeFilePath).name
-  languageMenu.text(localeName, setLanguage(localeCode))
+locales.forEach(({ code, name }, index) => {
+  languageMenu.text(name, setLanguage(code))
   if (index % 2 != 0) {
     languageMenu.row()
   }

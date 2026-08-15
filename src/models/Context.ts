@@ -1,11 +1,11 @@
 import { Context as BaseContext } from 'grammy'
-import { DocumentType } from '@typegoose/typegoose'
-import { User } from '@/models/User'
-import type { I18nContext } from '@grammyjs/i18n'
+import { type Localizer } from '@/helpers/i18n'
+import { type User } from '@/models/User'
 
 class Context extends BaseContext {
-  readonly i18n!: I18nContext
-  dbuser!: DocumentType<User>
+  i18n!: Localizer
+  db!: D1Database
+  dbuser!: User
 
   replyWithLocalization: this['reply'] = (text, other, ...rest) => {
     text = this.i18n.t(text)

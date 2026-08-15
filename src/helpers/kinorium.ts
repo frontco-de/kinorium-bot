@@ -1,6 +1,4 @@
-import env from '@/helpers/env'
-
-interface KinoriumMovie {
+export interface KinoriumMovie {
   id: number
   mixtype: string
   name: string
@@ -23,12 +21,20 @@ interface KinoriumResponse {
 }
 
 const REQUEST_TIMEOUT_MS = 7_000
+type Fetcher = (
+  input: RequestInfo | URL,
+  init?: RequestInit
+) => Promise<Response>
 
-async function fetchWithTimeout(url: string, init?: RequestInit) {
+async function fetchWithTimeout(
+  fetcher: Fetcher,
+  url: string,
+  init?: RequestInit
+) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...init, signal: controller.signal })
+    return await fetcher(url, { ...init, signal: controller.signal })
   } finally {
     clearTimeout(timeoutId)
   }
@@ -75,56 +81,62 @@ function isNoResultsError(
  * @returns Promise with result kind + movies
  */
 export async function searchMoviesDetailed(
-  query: string
+  query: string,
+  apiKey: string,
+  fetcher: Fetcher = fetch
 ): Promise<KinoriumSearchResult> {
   try {
-    // Clean the API key (remove any trailing &q if present)
-    const apiKey = env.APIKEY.replace(/&q$/, '').trim()
+    const cleanApiKey = apiKey.replace(/&q$/, '').trim()
 
     // Encode the query for URL
     const encodedQuery = encodeURIComponent(query)
 
     // Build the API URL
-    const url = `https://db.kinorium.com/search/?apikey=${apiKey}&q=${encodedQuery}`
+    const url = `https://db.kinorium.com/search/?apikey=${cleanApiKey}&q=${encodedQuery}`
 
-    console.log('Making request to Kinorium API')
-
-    // Make the request
-    const response = await fetchWithTimeout(url)
+    const response = await fetchWithTimeout(fetcher, url)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const data = (await response.json()) as KinoriumResponse
+    const data: unknown = await response.json()
+    if (typeof data !== 'object' || data === null) {
+      throw new Error('Kinorium returned an invalid response')
+    }
+    const result = data as Partial<KinoriumResponse>
 
-    // Check for API errors
-    if (data.error) {
-      console.error('Kinorium API error:', data.error)
-      if (isNoResultsError(data.error)) {
+    if (result.error) {
+      if (isNoResultsError(result.error)) {
         return { kind: 'no_results', movies: [] }
       }
       return { kind: 'error', movies: [] }
     }
 
-    // Return the movie list
-    return { kind: 'ok', movies: addKinoriumMovieUrls(data.movie_list || []) }
+    if (!Array.isArray(result.movie_list)) {
+      throw new Error('Kinorium response is missing movie_list')
+    }
+    return { kind: 'ok', movies: addKinoriumMovieUrls(result.movie_list) }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error('Error searching Kinorium API:', errorMessage)
+    console.error(
+      JSON.stringify({ event: 'kinorium_search_failed', error: errorMessage })
+    )
     return { kind: 'error', movies: [] }
   }
 }
 
 export async function searchMovies(
-  query: string
+  query: string,
+  apiKey: string,
+  fetcher: Fetcher = fetch
 ): Promise<KinoriumMovieWithUrl[]> {
-  const result = await searchMoviesDetailed(query)
+  const result = await searchMoviesDetailed(query, apiKey, fetcher)
   return result.movies
 }
 
 export type {
-  KinoriumMovie,
+  Fetcher,
   KinoriumMovieWithUrl,
   KinoriumResponse,
   KinoriumSearchResult,

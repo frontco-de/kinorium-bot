@@ -1,17 +1,27 @@
 name: Compile and lint code
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    types: [synchronize, opened]
+    types: [synchronize, opened, reopened]
 
 jobs:
   compile-code:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
       - name: Install modules
-        run: yarn
-      - name: Compile code
-        run: yarn tsc --skipLibCheck
+        run: yarn install --frozen-lockfile
+      - name: Generate Worker types
+        run: yarn types
       - name: Lint code
         run: yarn lint
+      - name: Test code
+        run: yarn test
+      - name: Build Worker
+        run: yarn build

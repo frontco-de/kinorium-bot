@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "kinorium-bot",
+  "main": "src/app.ts",
+  "compatibility_date": "2026-08-15",
+  "workers_dev": true,
+  "vars": {
+    "BOT_INFO": {
+      "id": 1848460309,
+      "is_bot": true,
+      "first_name": "KinoriumBot",
+      "username": "kinorium_bot",
+      "can_join_groups": false,
+      "can_read_all_group_messages": false,
+      "supports_inline_queries": true,
+      "can_connect_to_business": false,
+      "has_main_web_app": false,
+    },
+  },
+  "secrets": {
+    "required": ["TOKEN", "APIKEY", "WEBHOOK_SECRET"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kinorium-bot",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.yaml", "**/*.sql"],
+      "fallthrough": true,
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+    },
+  },
+}

@@ -1,15 +1,16 @@
 import { Bot, InlineQueryResultBuilder as R } from 'grammy'
+import sendHelp from '@/handlers/help'
+import handleLanguage from '@/handlers/language'
+import localize from '@/helpers/i18n'
 import { searchMoviesDetailed } from '@/helpers/kinorium'
+import languageMenu from '@/menus/language'
+import attachUser from '@/middlewares/attachUser'
+import configureI18n from '@/middlewares/configureI18n'
 import Context from '@/models/Context'
-import env from '@/helpers/env'
-
-export const bot = new Bot<Context>(env.TOKEN, {
-  ContextConstructor: Context,
-})
 
 const INLINE_QUERY_CACHE_TIME_SECONDS = 600
 
-export function registerInlineQueryHandlers() {
+function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
     try {
@@ -21,11 +22,7 @@ export function registerInlineQueryHandlers() {
         return
       }
 
-      // Log the search text for debugging
-      console.log('Received inline query:', searchText)
-      console.log('From user:', ctx.from?.username || ctx.from?.id)
-
-      const searchResult = await searchMoviesDetailed(searchText)
+      const searchResult = await searchMoviesDetailed(searchText, apiKey)
 
       if (searchResult.kind === 'error') {
         const title = ctx.i18n.t('inline.api_error_title')
@@ -59,10 +56,6 @@ export function registerInlineQueryHandlers() {
 
       const movies = searchResult.movies
       const hasMovies = movies.length > 0
-
-      // Log the movie list
-      console.log('Movies found:', movies.length)
-      console.log('Movie list:', JSON.stringify(movies, null, 2))
 
       // Create results based on movies
       const results = movies.slice(0, 10).map((movie) => {
@@ -126,4 +119,27 @@ export function registerInlineQueryHandlers() {
   })
 }
 
-export default bot
+export default function createBot(env: CloudflareBindings): Bot<Context> {
+  const bot = new Bot<Context>(env.TOKEN, {
+    ContextConstructor: Context,
+    botInfo: env.BOT_INFO,
+  })
+
+  bot.use(attachUser(env.DB))
+  bot.use(localize)
+  bot.use(configureI18n)
+  bot.use(languageMenu)
+  registerInlineQueryHandlers(bot, env.APIKEY)
+  bot.command(['help', 'start'], sendHelp)
+  bot.command('language', handleLanguage)
+  bot.catch((error) => {
+    const message =
+      error.error instanceof Error ? error.error.message : String(error.error)
+    console.error(
+      JSON.stringify({ event: 'telegram_update_failed', error: message })
+    )
+    throw error
+  })
+
+  return bot
+}

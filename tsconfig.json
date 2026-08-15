@@ -1,18 +1,20 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "lib": ["es2015"],
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "outDir": "dist",
+    "allowSyntheticDefaultImports": true,
     "baseUrl": "src",
+    "lib": ["ES2022", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["*"],
+      "@locales/*": ["../locales/*"],
+      "@migrations/*": ["../migrations/*"]
     },
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "strict": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "vitest.config.mts", "worker-configuration.d.ts"]
 }
