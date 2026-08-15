@@ -9,12 +9,17 @@ describe('localizer', () => {
     expect(
       localizer.t('inline.no_results_description', { query: 'Дюна' })
     ).toBe('Нічого не знайдено за “Дюна”')
+    expect(localizer.t('start', { username: 'kinorium_bot' })).toContain(
+      '<code>@kinorium_bot Dune 2021</code>'
+    )
   })
 
   it('falls back to English and then to the key', () => {
     const localizer = new Localizer()
 
-    expect(localizer.t('help')).toContain('This bot')
+    expect(localizer.t('help', { username: 'kinorium_bot' })).toContain(
+      '<b>How to use the bot</b>'
+    )
     expect(localizer.t('missing.key')).toBe('missing.key')
   })
 })

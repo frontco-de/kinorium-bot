@@ -1,6 +1,21 @@
 name: English
+start: |
+  🎬 <b>Find movies and TV series on Kinorium.</b>
+
+  In any chat, type <code>@${username} Dune 2021</code>, then select a result.
+
+  Use /language to change the language or /help for detailed instructions.
 help: |
-  <b>This bot</b> allows you to see how Telegram bots can be built.
+  <b>How to use the bot</b>
+
+  1. Open any Telegram chat.
+  2. Type <code>@${username}</code> followed by a movie or TV-series title. Add a year for a more precise search.
+  3. Select a result to send it.
+
+  Example: <code>@${username} Dune 2021</code>
+
+  /language — change the language
+  /help — show these instructions
 language: Please, select the language.
 language_selected: <b>This bot</b> now speaks English.
 inline:

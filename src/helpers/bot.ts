@@ -1,6 +1,7 @@
 import { Bot, InlineQueryResultBuilder as R } from 'grammy/web'
 import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
+import sendStart from '@/handlers/start'
 import localize from '@/helpers/i18n'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
 import {
@@ -154,7 +155,8 @@ export default function createBot(
   bot.use(configureI18n)
   registerLanguageMenu(bot)
   registerInlineQueryHandlers(bot, env.APIKEY, searchCache)
-  bot.command(['help', 'start'], sendHelp)
+  bot.command('start', sendStart)
+  bot.command('help', sendHelp)
   bot.command('language', handleLanguage)
   bot.catch((error) => {
     const message =

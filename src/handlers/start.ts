@@ -1,9 +1,9 @@
 import sendOptions from '@/helpers/sendOptions'
 import Context from '@/models/Context'
 
-export default function handleHelp(ctx: Context) {
+export default function handleStart(ctx: Context) {
   return ctx.reply(
-    ctx.i18n.t('help', { username: ctx.me.username }),
+    ctx.i18n.t('start', { username: ctx.me.username }),
     sendOptions(ctx)
   )
 }
