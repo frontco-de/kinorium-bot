@@ -14,13 +14,13 @@ describe('movie presentation', () => {
           url: 'https://en.kinorium.com/150802/',
         },
         'en',
-        { movie: 'Movie', tvSeries: 'TV series', present: 'present' }
+        { movie: 'Movie', tvSeries: 'TV series' }
       )
     ).toEqual({
       title: 'Terminator 3: Rise of the Machines',
       description: 'Movie (2003)',
       message:
-        'Movie <a href="https://en.kinorium.com/150802/">Terminator 3: Rise of the Machines</a> (2003)',
+        'Movie <a href="https://en.kinorium.com/150802/">«Terminator 3: Rise of the Machines»</a> (2003)',
     })
   })
 
@@ -37,13 +37,13 @@ describe('movie presentation', () => {
           url: 'https://ua.kinorium.com/774825/',
         },
         'uk',
-        { movie: 'Фільм', tvSeries: 'Серіал', present: 'дотепер' }
+        { movie: 'Фільм', tvSeries: 'Серіал' }
       )
     ).toEqual({
       title: 'Останні з нас',
-      description: 'Серіал (2023–дотепер)',
+      description: 'Серіал (2023–…)',
       message:
-        'Серіал <a href="https://ua.kinorium.com/774825/">Останні з нас</a> / <a href="https://ua.kinorium.com/774825/">The Last of Us</a> (2023–дотепер)',
+        'Серіал <a href="https://ua.kinorium.com/774825/">«Останні з нас»</a> (2023–…, The Last of Us)',
     })
   })
 
@@ -59,10 +59,29 @@ describe('movie presentation', () => {
           url: 'https://en.kinorium.com/1/',
         },
         'en',
-        { movie: 'Movie', tvSeries: 'TV series', present: 'present' }
+        { movie: 'Movie', tvSeries: 'TV series' }
       ).message
     ).toBe(
-      'Movie <a href="https://en.kinorium.com/1/">Tom &amp; Jerry &lt;Again&gt;</a> (2026)'
+      'Movie <a href="https://en.kinorium.com/1/">«Tom &amp; Jerry &lt;Again&gt;»</a> (2026)'
+    )
+  })
+
+  it('escapes a different original title inside the details', () => {
+    expect(
+      buildMoviePresentation(
+        {
+          id: 1,
+          mixtype: 'movie',
+          name: 'Том і Джеррі',
+          name_orig: 'Tom & Jerry <Again>',
+          year: 2026,
+          url: 'https://ua.kinorium.com/1/',
+        },
+        'uk',
+        { movie: 'Фільм', tvSeries: 'Серіал' }
+      ).message
+    ).toBe(
+      'Фільм <a href="https://ua.kinorium.com/1/">«Том і Джеррі»</a> (2026, Tom &amp; Jerry &lt;Again&gt;)'
     )
   })
 })

@@ -2,6 +2,7 @@ import { Bot, InlineQueryResultBuilder as R } from 'grammy/web'
 import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import localize from '@/helpers/i18n'
+import buildInlineMovieResultId from '@/helpers/inlineResult'
 import { searchMoviesDetailed } from '@/helpers/kinorium'
 import { buildMoviePresentation } from '@/helpers/moviePresentation'
 import { registerLanguageMenu } from '@/menus/language'
@@ -68,7 +69,6 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
       const labels = {
         movie: ctx.i18n.t('inline.movie'),
         tvSeries: ctx.i18n.t('inline.tv_series'),
-        present: ctx.i18n.t('inline.present'),
       }
 
       // Create results based on movies
@@ -95,7 +95,7 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
         }
 
         return R.article(
-          `movie-${movie.id}`,
+          buildInlineMovieResultId(ctx.inlineQuery.id, movie.id),
           presentation.title,
           articleOptions
         ).text(presentation.message, { parse_mode: 'HTML' })
