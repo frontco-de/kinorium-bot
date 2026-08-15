@@ -23,7 +23,7 @@ Log through `src/helpers/logging.ts`. It records the event name and the error's 
 
 ## Key Files
 
-- `wrangler.jsonc` — declares the Worker, the D1 and rate limit bindings, and public bot metadata. Secrets are never declared here; upload them with Wrangler.
+- `wrangler.jsonc` — declares the Worker, the D1 and rate limit bindings, public bot metadata, and the names of the required secrets. The `secrets.required` list is what makes `wrangler types` emit `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET`, so CI generates the same bindings as a local checkout that has a `.env`. Never put secret values here.
 - `migrations/` — versions the D1 schema; never rewrite an applied migration.
 - `src/models/Context.ts` — defines bot-specific context properties and helpers.
 - `src/models/User.ts` — stores the user's language preference.

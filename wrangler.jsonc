@@ -6,8 +6,7 @@
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   "vars": {
-    // Public `getMe` metadata. Required secrets (TOKEN, APIKEY,
-    // WEBHOOK_SECRET) live in Cloudflare secrets; see docs/DEPLOY.md.
+    // Public `getMe` metadata.
     "BOT_INFO": {
       "id": 1848460309,
       "is_bot": true,
@@ -24,6 +23,12 @@
       "can_manage_bots": false,
       "supports_join_request_queries": false,
     },
+  },
+  // Names only. `wrangler types` emits these bindings from this list, so type
+  // generation stays identical with and without a local `.env`. Values live in
+  // Cloudflare secrets; see docs/DEPLOY.md.
+  "secrets": {
+    "required": ["TOKEN", "APIKEY", "WEBHOOK_SECRET"],
   },
   "d1_databases": [
     {
