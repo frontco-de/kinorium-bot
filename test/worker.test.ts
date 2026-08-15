@@ -1,4 +1,5 @@
 import { SELF } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 import { secretsMatch } from '@/app'
 
@@ -14,7 +15,7 @@ describe('Worker HTTP interface', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       status: 'ok',
-      bot: 'kinorium_bot',
+      bot: env.BOT_INFO.username,
     })
   })
 
