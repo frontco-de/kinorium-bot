@@ -3,16 +3,23 @@ import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import localize from '@/helpers/i18n'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
-import { searchMoviesDetailed } from '@/helpers/kinorium'
+import {
+  type KinoriumSearchCache,
+  searchMoviesDetailed,
+} from '@/helpers/kinorium'
 import { buildMoviePresentation } from '@/helpers/moviePresentation'
 import { registerLanguageMenu } from '@/menus/language'
 import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
 import Context from '@/models/Context'
 
-const INLINE_QUERY_CACHE_TIME_SECONDS = 0
+const INLINE_QUERY_CACHE_TIME_SECONDS = 5
 
-function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
+function registerInlineQueryHandlers(
+  bot: Bot<Context>,
+  apiKey: string,
+  searchCache: KinoriumSearchCache
+): void {
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
     try {
@@ -30,7 +37,9 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
       const searchResult = await searchMoviesDetailed(
         searchText,
         apiKey,
-        ctx.dbuser.language
+        ctx.dbuser.language,
+        fetch,
+        searchCache
       )
 
       if (searchResult.kind === 'error') {
@@ -131,7 +140,10 @@ function registerInlineQueryHandlers(bot: Bot<Context>, apiKey: string): void {
   })
 }
 
-export default function createBot(env: CloudflareBindings): Bot<Context> {
+export default function createBot(
+  env: CloudflareBindings,
+  searchCache: KinoriumSearchCache
+): Bot<Context> {
   const bot = new Bot<Context>(env.TOKEN, {
     ContextConstructor: Context,
     botInfo: env.BOT_INFO,
@@ -141,7 +153,7 @@ export default function createBot(env: CloudflareBindings): Bot<Context> {
   bot.use(localize)
   bot.use(configureI18n)
   registerLanguageMenu(bot)
-  registerInlineQueryHandlers(bot, env.APIKEY)
+  registerInlineQueryHandlers(bot, env.APIKEY, searchCache)
   bot.command(['help', 'start'], sendHelp)
   bot.command('language', handleLanguage)
   bot.catch((error) => {

@@ -1,5 +1,6 @@
 import { webhookCallback } from 'grammy/web'
 import createBot from '@/helpers/bot'
+import createSearchCache from '@/helpers/searchCache'
 
 const encoder = new TextEncoder()
 
@@ -16,7 +17,7 @@ function json(data: unknown, status = 200): Response {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url)
     if (request.method === 'GET' && ['/', '/health'].includes(url.pathname)) {
       return json({ status: 'ok', bot: env.BOT_INFO.username })
@@ -35,12 +36,17 @@ export default {
     }
 
     try {
-      const handleUpdate = webhookCallback(createBot(env), 'cloudflare-mod', {
-        onTimeout: 'throw',
-        // grammY repeats the check; authentication already happened above.
-        secretToken: webhookSecret,
-        timeoutMilliseconds: 9_000,
-      })
+      const searchCache = createSearchCache(caches.default, ctx, url.origin)
+      const handleUpdate = webhookCallback(
+        createBot(env, searchCache),
+        'cloudflare-mod',
+        {
+          onTimeout: 'throw',
+          // grammY repeats the check; authentication already happened above.
+          secretToken: webhookSecret,
+          timeoutMilliseconds: 9_000,
+        }
+      )
       return await handleUpdate(request)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

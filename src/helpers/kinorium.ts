@@ -112,6 +112,18 @@ type KinoriumSearchResult =
   | { kind: 'no_results'; movies: [] }
   | { kind: 'error'; movies: [] }
 
+export interface KinoriumSearchCache {
+  get(
+    query: string,
+    language: SupportedLocale
+  ): Promise<KinoriumSearchResult | undefined>
+  set(
+    query: string,
+    language: SupportedLocale,
+    result: Extract<KinoriumSearchResult, { kind: 'ok' }>
+  ): void
+}
+
 function isNoResultsError(
   error: NonNullable<KinoriumResponse['error']>
 ): boolean {
@@ -138,9 +150,13 @@ export async function searchMoviesDetailed(
   query: string,
   apiKey: string,
   language: SupportedLocale,
-  fetcher: Fetcher = fetch
+  fetcher: Fetcher = fetch,
+  searchCache?: KinoriumSearchCache
 ): Promise<KinoriumSearchResult> {
   try {
+    const cachedResult = await searchCache?.get(query, language)
+    if (cachedResult !== undefined) return cachedResult
+
     const cleanApiKey = apiKey.replace(/&q$/, '').trim()
 
     // Encode the query for URL
@@ -173,10 +189,14 @@ export async function searchMoviesDetailed(
     if (!Array.isArray(result.movie_list)) {
       throw new Error('Kinorium response is missing movie_list')
     }
-    return {
+    const searchResult = {
       kind: 'ok',
       movies: addKinoriumMovieUrls(result.movie_list, language),
+    } satisfies KinoriumSearchResult
+    if (searchResult.movies.length > 0) {
+      searchCache?.set(query, language, searchResult)
     }
+    return searchResult
   } catch (error) {
     const errorType = error instanceof Error ? error.name : 'UnknownError'
     console.error(
