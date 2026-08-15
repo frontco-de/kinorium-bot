@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.1.0](https://github.com/frontco-de/kinorium-bot/compare/v1.0.1...v1.1.0) (2026-08-15)
+
+### Features
+
+- **inline:** rate limit searches and harden untrusted input ([27cc2c2](https://github.com/frontco-de/kinorium-bot/commit/27cc2c27a9ac1789781cd2a077a7b2077e2d29cd))
+
 ## [1.0.1](https://github.com/frontco-de/kinorium-bot/compare/v1.0.0...v1.0.1) (2026-08-15)
 
 ### Bug Fixes
