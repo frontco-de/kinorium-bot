@@ -2,7 +2,7 @@ name: English
 start: |
   🎬 <b>Find movies and TV series on Kinorium.</b>
 
-  In any chat, type <code>@${username} Dune 2021</code>, then select a result.
+  In any chat, type <code>@${username} Dune 2026</code>, then select a result.
 
   Use /language to change the language or /help for detailed instructions.
 help: |
@@ -12,7 +12,7 @@ help: |
   2. Type <code>@${username}</code> followed by a movie or TV-series title. Add a year for a more precise search.
   3. Select a result to send it.
 
-  Example: <code>@${username} Dune 2021</code>
+  Example: <code>@${username} Dune 2026</code>
 
   /language — change the language
   /help — show these instructions
@@ -24,7 +24,7 @@ inline:
   tv_series: 'TV series'
   no_results_title: 'No results'
   no_results_description: 'No results for “${query}”'
-  no_results_message: 'No results for “${query}”. Try another title, fix spelling, or add a year (e.g., “Dune 2021”).'
+  no_results_message: 'No results for “${query}”. Try another title, fix spelling, or add a year (e.g., “Dune 2026”).'
   api_error_title: 'Service unavailable'
   api_error_description: "Can't reach Kinorium"
   api_error_message: 'Kinorium is temporarily unavailable. Please try again in a minute.'

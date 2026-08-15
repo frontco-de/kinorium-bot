@@ -10,7 +10,7 @@ describe('localizer', () => {
       localizer.t('inline.no_results_description', { query: 'Дюна' })
     ).toBe('Нічого не знайдено за “Дюна”')
     expect(localizer.t('start', { username: 'kinorium_bot' })).toContain(
-      '<code>@kinorium_bot Dune 2021</code>'
+      '<code>@kinorium_bot Dune 2026</code>'
     )
   })
 
