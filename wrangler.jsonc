@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "kinorium-bot",
+  "account_id": "e4b96293222e2f5a31ed954f03743669",
   "main": "src/app.ts",
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
@@ -20,7 +21,6 @@
       "allows_users_to_create_topics": false,
       "can_manage_bots": false,
       "supports_join_request_queries": false,
-
       // "id": 8872819363,
       // "is_bot": true,
       // "first_name": "KinoriumTest",

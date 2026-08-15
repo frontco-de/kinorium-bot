@@ -10,11 +10,11 @@ Install dependencies, authenticate Wrangler, and run all local gates:
 nvm use
 yarn install --frozen-lockfile
 npx wrangler login
-yarn types
-yarn lint
-yarn test
-yarn build
+npx wrangler whoami
+yarn validate
 ```
+
+Before running any deployment or D1 command, replace `REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID` in `wrangler.jsonc` with the account ID shown by `npx wrangler whoami`. The configured ID makes Wrangler target that Cloudflare account. Do not attempt deployment while the placeholder remains. The account ID identifies the account but is not a secret.
 
 Copy `.env.example` to `.env`. Set `TOKEN` to the test bot token, `APIKEY` to the Kinorium key, and generate `WEBHOOK_SECRET` with `openssl rand -hex 32`. Never commit `.env`, and do not create `.dev.vars` because Wrangler gives it precedence.
 
@@ -83,6 +83,20 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, user data, or authenticated URLs.
 
 The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently.
+
+## Automatic Deployments from `main`
+
+Connect the existing `kinorium-bot` Worker to the `frontco-de/kinorium-bot` repository under **Settings → Builds** in the Cloudflare dashboard. Configure:
+
+- Production branch: `main`
+- Root directory: `/`
+- Build command: `yarn validate`
+- Deploy command: `yarn deploy`
+- Non-production branch builds: disabled; use the separate test Worker for previews
+
+Before enabling builds, commit the real `account_id` in `wrangler.jsonc` and confirm the dashboard Worker name matches its `name`. Keep `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET` as Worker runtime secrets under **Settings → Variables & Secrets**; build variables are not available to the deployed Worker. Require the GitHub validation workflow to pass before merging into `main`, then verify the Cloudflare build and `/health` after each merge.
+
+`yarn deploy` does not apply D1 migrations. When a release includes a migration, make it backward-compatible, run `yarn d1:migrate:remote`, verify it, and only then merge the Worker change into `main`.
 
 ## Promote, Update, and Roll Back
 

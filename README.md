@@ -55,7 +55,8 @@ TV series «Futurama» (1999–…, Futurama)
 
 The quoted title links to the English, Russian, or Ukrainian Kinorium site selected by the user's bot language. A different original title follows the year; an ellipsis marks an ongoing series. The bot also supports:
 
-- `/start` and `/help` — show help.
+- `/start` — show a short inline-search example.
+- `/help` — show detailed usage instructions.
 - `/language` — choose the interface language.
 
 Telegram privately caches completed inline answers for five seconds. The Worker separately caches successful, non-empty Kinorium searches for five minutes, so a successful answer can be up to five minutes old. Empty results and upstream errors remain uncached, so temporary failures and newly indexed titles are not retained as misses.
@@ -67,6 +68,7 @@ Telegram privately caches completed inline answers for five seconds. The Worker 
 - `yarn lint` — check formatting, ESLint rules, and TypeScript types.
 - `yarn build` — create a local Wrangler deployment bundle without publishing it.
 - `yarn types` — regenerate Worker binding and runtime types after config changes.
+- `yarn validate` — run every check required before deployment.
 
 See the [contributor reference](docs/contributor-guide.md) for architecture and verification guidance.
 

@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit --project test/tsconfig.json",
-    "types": "wrangler types --env-interface CloudflareBindings"
+    "types": "wrangler types --env-interface CloudflareBindings",
+    "validate": "yarn types && yarn lint && yarn test && yarn build"
   },
   "dependencies": {
     "grammy": "^1.38.4",
