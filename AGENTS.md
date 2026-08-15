@@ -1,71 +1,28 @@
-# AGENTS.md
+# Repository Guidelines
 
-Instructions for AI coding agents working in this repository.
+## Non-Negotiable Engineering Rules
 
-## Project Overview
+- Apply DRY thoughtfully: remove meaningful duplication, but do not create abstractions before a repeated concept is understood.
+- Follow SOLID at module and class boundaries. Keep handlers thin, dependencies explicit, and each unit focused on one responsibility.
+- Write Clean Code: use intention-revealing names, small functions, early returns, and comments that explain why rather than restating what.
+- Practice pragmatic TDD. For fixes, first add a regression test when the behavior can be isolated. For new logic, prefer a red-green-refactor loop. Do not manufacture low-value tests for trivial configuration or documentation changes.
+- Follow Standard TypeScript style: two-space indentation, single quotes, no semicolons, and clear, sorted imports. The repository currently checks these conventions through Prettier and ESLint with `yarn lint`; `ts-standard` itself is not installed.
+- Never edit generated `dist/` files or commit secrets from `.env`.
 
-This is a TypeScript Telegram bot starter built on grammY (based on https://github.com/frontco-de/kinorium-bot). It includes:
+## Structure and Boundaries
 
-- Inline-mode search: takes inline query text, calls the Kinorium API, and returns inline article results.
-- MongoDB persistence for a `User` model (stores language preference).
-- i18n via YAML locale files and a language selection menu.
+`src/app.ts` is the composition root. Place Telegram commands in `src/handlers/`, integrations and shared setup in `src/helpers/`, request pipeline logic in `src/middlewares/`, persistence and context types in `src/models/`, menus in `src/menus/`, and translations in `locales/`. Use the `@/` alias for imports from `src`; ESLint rejects relative source imports.
 
-## Key Paths
+See [docs/contributor-guide.md](docs/contributor-guide.md) for the architecture flow, key files, environment requirements, and validation guidance.
 
-- `src/app.ts` — application entry point; wires middleware, commands, and starts the bot runner.
-- `src/helpers/bot.ts` — grammY `Bot` instance and inline query handler registration.
-- `src/helpers/kinorium.ts` — Kinorium API request + response shaping (`searchMoviesDetailed`).
-- `src/helpers/env.ts` — loads `.env` and validates required vars.
-- `src/helpers/startMongo.ts` — MongoDB connection.
-- `src/models/Context.ts` — custom grammY context (`ctx.dbuser`, `ctx.replyWithLocalization`).
-- `src/models/User.ts` — MongoDB user model (Typegoose) + upsert helper.
-- `locales/*.yaml` — i18n content and language names.
-- `dist/` — compiled output (do not edit by hand).
+## Required Workflow
 
-## Environment Variables
+Install with `yarn`, run locally with `yarn dev`, compile with `yarn build-ts`, and run all configured static checks with `yarn lint`. No automated test runner or coverage threshold is currently configured; add focused tests with new testable behavior and document manual Telegram verification until a runner is adopted.
 
-Required (validated by `src/helpers/env.ts`):
+Use Conventional Commits: `type(scope): imperative summary`, for example `fix(inline): handle empty results`. Use matching kebab-case branch names such as `feat/movie-posters`, `fix/api-timeout`, `refactor/bot-context`, or `chore/update-deps`.
 
-- `TOKEN` — Telegram bot token.
-- `MONGO` — MongoDB connection string.
-- `APIKEY` — Kinorium API key used for search.
+Pull requests must contain a concise bullet summary, linked issue when applicable, verification steps, and screenshots for visible Telegram changes. Keep unrelated changes separate and ensure CI compile and lint checks pass.
 
-Notes:
+## Security
 
-- `.env` is developer-specific and may contain secrets; do not commit it.
-- Use `.env.sample` for documented placeholders.
-
-## Common Commands
-
-- Install: `yarn`
-- Dev (watch + run compiled output): `yarn dev`
-- Build TypeScript: `yarn build-ts`
-- Run built bot: `node dist/app.js` (or `yarn distribute`)
-- Lint/format check: `yarn lint` (runs `prettier --check src` + eslint)
-
-## Code Style & Conventions
-
-- Language: TypeScript (strict). Keep changes minimal and consistent with existing patterns.
-- Imports: use the `@/*` alias (configured in `tsconfig.json`). Runtime uses `module-alias/register`, so changes to import structure must be validated against `dist/` output.
-- Error handling:
-  - Inline query handler should fail “softly” (return empty results on unexpected errors).
-  - Prefer user-friendly “no results” / “API error” inline articles over throwing.
-  - Log actionable errors; avoid logging secrets (tokens, API keys).
-- Keep responses to Telegram within platform constraints (short titles/descriptions; avoid huge payloads).
-- Locales: `locales/*.yaml` must include a top-level `name` field (used for the language menu button labels).
-
-## Working Agreements for Agents
-
-- Do not edit generated files in `dist/`; edit `src/` and rebuild if needed.
-- Avoid introducing new dependencies unless necessary; prefer existing libraries.
-- When you change behavior, run the narrowest relevant command(s) (e.g., `yarn build-ts`, then `yarn lint` if appropriate).
-- If a change affects env vars, update both `README.md` and `.env.sample`.
-- Be careful with `.env` contents in logs, diffs, and messages—treat it as secret.
-
-## Quick Functional Flow (for Orientation)
-
-1. `src/app.ts` connects to Mongo, installs middlewares, and starts the bot.
-2. `attachUser` upserts a user record and stores it on `ctx.dbuser` (infers default locale from Telegram for `en`/`ru`/`uk`).
-3. `configureI18n` sets `ctx.i18n.locale(ctx.dbuser.language)`; `ctx.replyWithLocalization()` uses i18n keys.
-4. Inline queries in `src/helpers/bot.ts` call `searchMoviesDetailed()` from `src/helpers/kinorium.ts`.
-5. Results are mapped into inline “article” results and returned via `answerInlineQuery`.
+Keep `TOKEN`, `MONGO`, and `APIKEY` only in `.env`. Never log secrets or full authenticated request URLs. Document configuration changes in `.env.sample` and `README.md`.

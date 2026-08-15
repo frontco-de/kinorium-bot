@@ -1,27 +1,67 @@
-# Telegram bot based on [grammY](https://grammy.dev)
+# Kinorium Bot
 
-Please, enjoy this starter template for Telegram bots based on [grammY](https://grammy.dev). It includes most common middlewares, MongoDB integration, language picker and internationalization and shows basic encapsulation techniques used by me.
+A multilingual Telegram bot for finding movies and TV shows through the Kinorium API. The bot works in Telegram inline mode and returns up to ten matching titles with release information, poster thumbnails when available, and links to Kinorium.
 
-This project uses an inline-mode bot flow: it takes inline query text, searches movies via the Kinorium API, and returns results back to Telegram.
+The project is written in strict TypeScript and uses [grammY](https://grammy.dev), MongoDB with Typegoose, and YAML-based localization for English, Russian, and Ukrainian.
 
-# Installation and local launch
+## Prerequisites
 
-1. Clone the repo: `git clone https://github.com/frontco-de/kinorium-bot`
-2. Launch the [mongo database](https://www.mongodb.com/) locally
-3. Create `.env` with the environment variables listed below
-4. Run `yarn` in the root folder
-5. Run `yarn dev` to start the bot in development mode (with auto-rebuilds on source changes)
+- Node.js 24 (see `.nvmrc`)
+- Yarn Classic
+- A running MongoDB instance
+- A Telegram bot token
+- A Kinorium API key
 
-And you should be good to go! Feel free to fork and submit pull requests. Thanks!
+## Getting Started
 
-# Environment variables
+```sh
+git clone https://github.com/frontco-de/kinorium-bot.git
+cd kinorium-bot
+nvm use
+yarn
+cp .env.sample .env
+```
 
-- `TOKEN` — Telegram bot token
-- `MONGO` — URL of the mongo database
-- `APIKEY` — Kinorium API key used for movie search
+Set the required values in `.env`:
 
-Also, please, consider looking at `.env.sample`.
+```dotenv
+TOKEN=YOUR_TELEGRAM_BOT_TOKEN
+MONGO=mongodb://localhost:27017/test
+APIKEY=YOUR_KINORIUM_API_KEY
+```
 
-# License
+Start MongoDB, then run the bot in watch mode:
 
-MIT — use for any purpose. If you redistribute, please keep attribution to https://github.com/frontco-de/kinorium-bot (and the original starter it is based on). Thanks!
+```sh
+yarn dev
+```
+
+## Using the Bot
+
+In any Telegram chat, type the bot username followed by a movie or series title:
+
+```text
+@your_bot_username Dune 2021
+```
+
+Select a result to send its title, type, release year, and Kinorium link. The bot also supports:
+
+- `/start` and `/help` — show help.
+- `/language` — choose the interface language.
+
+## Development Commands
+
+- `yarn dev` — watch TypeScript files and restart after successful compilation.
+- `yarn build-ts` — compile source files into `dist/`.
+- `yarn distribute` — compile and run the built application.
+- `yarn lint` — check formatting and lint rules with zero warnings allowed.
+
+Automated tests are not configured yet. Before submitting a change, run `yarn build-ts` and `yarn lint`, then manually verify the affected Telegram flow. See the [contributor reference](docs/contributor-guide.md) for architecture, conventions, and verification guidance.
+
+## Deployment
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for Telegram setup, production secrets, long-polling deployment with systemd, verification, updates, and rollback guidance.
+
+## License
+
+Released under the [MIT License](LICENSE).
