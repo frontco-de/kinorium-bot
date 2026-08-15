@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.1.1](https://github.com/frontco-de/kinorium-bot/compare/v1.1.0...v1.1.1) (2026-08-15)
+
+### Bug Fixes
+
+- **config:** restore required secret declarations ([2152069](https://github.com/frontco-de/kinorium-bot/commit/2152069a9289df1c37da164c137f1a32db898262))
+- **locales:** use a current year in search examples ([7c75631](https://github.com/frontco-de/kinorium-bot/commit/7c75631356390c13340038ab49e4a394d07ee7a1))
+
 ## [1.1.0](https://github.com/frontco-de/kinorium-bot/compare/v1.0.1...v1.1.0) (2026-08-15)
 
 ### Features
