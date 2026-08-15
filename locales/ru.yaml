@@ -27,3 +27,6 @@ inline:
   api_error_title: 'Сервис недоступен'
   api_error_description: 'Нет ответа от Kinorium'
   api_error_message: 'Kinorium временно недоступен. Попробуйте ещё раз через минуту.'
+  unexpected_error_title: 'Что-то пошло не так'
+  unexpected_error_description: 'Не удалось выполнить поиск'
+  unexpected_error_message: 'Во время поиска что-то пошло не так. Попробуйте ещё раз через минуту.'

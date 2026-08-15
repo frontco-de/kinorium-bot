@@ -105,6 +105,22 @@ describe('Kinorium search', () => {
     expect(setCache).not.toHaveBeenCalled()
   })
 
+  it('returns an error for an upstream server failure', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 500 }))
+    const setCache = vi.fn<KinoriumSearchCache['set']>()
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: setCache,
+    }
+
+    await expect(
+      searchMoviesDetailed('Dune', 'secret', 'en', fetcher, searchCache)
+    ).resolves.toEqual({ kind: 'error', movies: [] })
+    expect(setCache).not.toHaveBeenCalled()
+  })
+
   it('returns an error for malformed data', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

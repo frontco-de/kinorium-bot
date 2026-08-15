@@ -3,6 +3,7 @@ import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import sendStart from '@/handlers/start'
 import localize from '@/helpers/i18n'
+import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
 import {
   type KinoriumSearchCache,
@@ -44,16 +45,10 @@ function registerInlineQueryHandlers(
       )
 
       if (searchResult.kind === 'error') {
-        const title = ctx.i18n.t('inline.api_error_title')
-        const description = ctx.i18n.t('inline.api_error_description')
-        const text = ctx.i18n.t('inline.api_error_message')
-        await ctx.answerInlineQuery(
-          [R.article('api-error', title, { description }).text(text)],
-          {
-            cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-            is_personal: true,
-          }
-        )
+        await ctx.answerInlineQuery([buildInlineErrorResult(ctx.i18n, 'api')], {
+          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+          is_personal: true,
+        })
         return
       }
 
@@ -132,11 +127,13 @@ function registerInlineQueryHandlers(
       console.error(
         JSON.stringify({ event: 'inline_query_failed', error: errorType })
       )
-      // Send empty results on error
-      await ctx.answerInlineQuery([], {
-        cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-        is_personal: true,
-      })
+      await ctx.answerInlineQuery(
+        [buildInlineErrorResult(ctx.i18n, 'unexpected')],
+        {
+          cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
+          is_personal: true,
+        }
+      )
     }
   })
 }
