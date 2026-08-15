@@ -24,7 +24,7 @@ The application is a strict TypeScript Telegram bot built with grammY:
 
 ## Local Development
 
-Create `.dev.vars` from `.dev.vars.example`, then initialize local D1.
+Create `.env` from `.env.example`, then initialize local D1. Do not also create `.dev.vars`; Wrangler gives it precedence over `.env`.
 
 - `yarn` — install the locked dependencies.
 - `yarn d1:migrate:local` — apply unapplied migrations to local D1.

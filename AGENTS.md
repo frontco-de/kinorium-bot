@@ -7,7 +7,7 @@
 - Write Clean Code: use intention-revealing names, small functions, early returns, and comments that explain why rather than restating what.
 - Practice pragmatic TDD. For fixes, first add a regression test when the behavior can be isolated. For new logic, prefer a red-green-refactor loop. Do not manufacture low-value tests for trivial configuration or documentation changes.
 - Follow Standard TypeScript (`standard-ts`) conventions: two-space indentation, single quotes, no semicolons, and clear, sorted imports. Prettier and ESLint enforce the repository rules through `yarn lint`.
-- Never edit generated `dist/` or `worker-configuration.d.ts` manually. Never commit `.dev.vars`, `.env`, tokens, or API keys.
+- Never edit generated `dist/` or `worker-configuration.d.ts` manually. Never commit local `.env`, `.dev.vars`, tokens, or API keys; `.env.example` contains placeholders only.
 
 ## Structure and Boundaries
 
@@ -25,4 +25,4 @@ Pull requests must contain a concise bullet summary, linked issue when applicabl
 
 ## Security
 
-Keep `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET` in `.dev.vars` locally and Cloudflare secrets remotely. Never log secrets, Telegram updates, search queries, or authenticated URLs. Keep D1 access parameterized and document binding changes in `wrangler.jsonc`, `.dev.vars.example`, and `README.md`.
+Keep `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET` in `.env` locally and Cloudflare secrets remotely. Do not also create `.dev.vars`. Never log secrets, Telegram updates, search queries, or authenticated URLs. Keep D1 access parameterized and document binding changes in `wrangler.jsonc`, `.env.example`, and `README.md`.

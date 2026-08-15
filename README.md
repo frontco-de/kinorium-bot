@@ -19,10 +19,10 @@ git clone https://github.com/frontco-de/kinorium-bot.git
 cd kinorium-bot
 nvm use
 yarn
-cp .dev.vars.example .dev.vars
+cp .env.example .env
 ```
 
-Set the required values in `.dev.vars` and generate a separate random webhook secret:
+Set the required values in `.env` and generate a separate random webhook secret:
 
 ```dotenv
 TOKEN=YOUR_TELEGRAM_BOT_TOKEN

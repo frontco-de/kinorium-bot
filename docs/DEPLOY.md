@@ -16,7 +16,7 @@ yarn test
 yarn build
 ```
 
-Copy `.dev.vars.example` to `.dev.vars`. Set `TOKEN` to the test bot token, `APIKEY` to the Kinorium key, and generate `WEBHOOK_SECRET` with `openssl rand -hex 32`. Never commit `.dev.vars`. If using a separate test bot, replace the public `BOT_INFO` object in `wrangler.jsonc` with the `result` fields returned by Telegram's `getMe`, then run `yarn types`; restore the production bot metadata before promotion.
+Copy `.env.example` to `.env`. Set `TOKEN` to the test bot token, `APIKEY` to the Kinorium key, and generate `WEBHOOK_SECRET` with `openssl rand -hex 32`. Never commit `.env`, and do not create `.dev.vars` because Wrangler gives it precedence. If using a separate test bot, replace the public `BOT_INFO` object in `wrangler.jsonc` with the `result` fields returned by Telegram's `getMe`, then run `yarn types`; restore the production bot metadata before promotion.
 
 For local development, initialize D1 with `yarn d1:migrate:local`, then run `yarn dev` and check `http://localhost:8787/health`.
 
@@ -25,7 +25,7 @@ For local development, initialize D1 with `yarn d1:migrate:local`, then run `yar
 Deploy from `feat/cloudflare-worker` while testing. Wrangler automatically provisions the configured D1 database on the first deployment and writes its ID to `wrangler.jsonc`:
 
 ```sh
-yarn deploy --secrets-file .dev.vars
+yarn deploy --secrets-file .env
 yarn d1:migrate:remote
 ```
 
