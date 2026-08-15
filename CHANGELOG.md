@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.0.1](https://github.com/frontco-de/kinorium-bot/compare/v1.0.0...v1.0.1) (2026-08-15)
+
+### Bug Fixes
+
+- **inline:** show localized error results ([4503119](https://github.com/frontco-de/kinorium-bot/commit/45031198010498a1d8b280f9b915608c61b38d9f))
+- **release:** format generated changelog ([958ea42](https://github.com/frontco-de/kinorium-bot/commit/958ea42ebbe092a90d3fac4a18ba9e1e19d0f8fe))
+
 ## 1.0.0 (2026-08-15)
 
 ### Features
