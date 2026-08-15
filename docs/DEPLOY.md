@@ -33,6 +33,8 @@ unset TOKEN APIKEY WEBHOOK_SECRET
 
 `BOT_INFO` mirrors Telegram's `getMe` response; it does not configure bot capabilities. Do not manually force fields to `true`. Standard inline mode requires `supports_inline_queries: true`, enabled through BotFather's `/setinline`. `can_join_groups` is unrelated to inline mode, and `supports_guest_queries` belongs to Telegram's separate guest-bot feature, which this project does not handle.
 
+Keep BotFather privacy mode enabled (`/setprivacy` → Enable). With privacy mode disabled, Telegram delivers every group message to the Worker; the bot drops those updates before touching D1, but each one still costs an invocation. Privacy mode is enabled for this bot, which is why `BOT_INFO` carries `can_read_all_group_messages: false`. Re-run `getMe` and `yarn types` after changing the setting.
+
 For local development, initialize D1 with `yarn d1:migrate:local`, then run `yarn dev` and check `http://localhost:8787/health`.
 
 ## 2. Deploy the Worker and D1
@@ -81,9 +83,13 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - Confirm the selected title, including its quotation marks, links to the language-specific Kinorium domain and that an ongoing series uses `…`.
 - Repeat an identical query within five seconds to exercise Telegram's personal cache. Repeat it after five seconds but within five minutes to exercise the Worker's regional search cache.
 - Check no-result and upstream-error behavior in each affected language.
-- Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, user data, or authenticated URLs.
+- In a group with two accounts, send `/language` from one and press a button from the other: the second account must see the "menu belongs to another user" alert.
+- Send ordinary group text and confirm no new row appears in D1 (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT COUNT(*) FROM users"`).
+- Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
-The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently.
+The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare only guarantees functional cache operations for Workers on custom domains, so on `workers.dev` expect the search cache to be best effort.
+
+Inline searches are limited to 30 per user per minute per Cloudflare location through the `INLINE_RATE_LIMITER` binding. The counters are location-local and eventually consistent, so the limit protects the Kinorium quota rather than providing exact accounting.
 
 ## Automatic Deployments from `main`
 
