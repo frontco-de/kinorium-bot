@@ -1,9 +1,9 @@
-import { Bot, InlineQueryResultBuilder as R } from 'grammy'
+import { Bot, InlineQueryResultBuilder as R } from 'grammy/web'
 import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import localize from '@/helpers/i18n'
 import { searchMoviesDetailed } from '@/helpers/kinorium'
-import languageMenu from '@/menus/language'
+import { registerLanguageMenu } from '@/menus/language'
 import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
 import Context from '@/models/Context'
@@ -128,7 +128,7 @@ export default function createBot(env: CloudflareBindings): Bot<Context> {
   bot.use(attachUser(env.DB))
   bot.use(localize)
   bot.use(configureI18n)
-  bot.use(languageMenu)
+  registerLanguageMenu(bot)
   registerInlineQueryHandlers(bot, env.APIKEY)
   bot.command(['help', 'start'], sendHelp)
   bot.command('language', handleLanguage)

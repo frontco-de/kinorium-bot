@@ -1,4 +1,4 @@
-import { Context as BaseContext } from 'grammy'
+import { Context as BaseContext } from 'grammy/web'
 import { type Localizer } from '@/helpers/i18n'
 import { type User } from '@/models/User'
 

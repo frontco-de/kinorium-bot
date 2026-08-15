@@ -1,14 +1,8 @@
 import { SELF } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
-import { secretsMatch } from '@/app'
 
 describe('Worker HTTP interface', () => {
-  it('compares webhook secrets', async () => {
-    await expect(secretsMatch('secret', 'secret')).resolves.toBe(true)
-    await expect(secretsMatch('wrong', 'secret')).resolves.toBe(false)
-  })
-
   it('reports health without exposing secrets', async () => {
     const response = await SELF.fetch('https://example.com/health')
 
@@ -34,5 +28,18 @@ describe('Worker HTTP interface', () => {
       method: 'POST',
     })
     expect(response.status).toBe(401)
+  })
+
+  it('accepts a webhook with the configured secret', async () => {
+    const response = await SELF.fetch('https://example.com/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Bot-Api-Secret-Token': env.WEBHOOK_SECRET,
+      },
+      body: JSON.stringify({ update_id: 0 }),
+    })
+
+    expect(response.status).toBe(200)
   })
 })

@@ -1,4 +1,4 @@
-import { type MiddlewareFn } from 'grammy'
+import { type MiddlewareFn } from 'grammy/web'
 import { isSupportedLocale, type SupportedLocale } from '@/helpers/locales'
 import Context from '@/models/Context'
 import { findOrCreateUser } from '@/models/User'

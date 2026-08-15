@@ -1,4 +1,4 @@
-import { NextFunction } from 'grammy'
+import { NextFunction } from 'grammy/web'
 import Context from '@/models/Context'
 
 function configureI18n(ctx: Context, next: NextFunction) {

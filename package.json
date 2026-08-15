@@ -19,7 +19,6 @@
     "types": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "@grammyjs/menu": "^1.3.1",
     "grammy": "^1.38.4",
     "js-yaml": "^4.1.0"
   },

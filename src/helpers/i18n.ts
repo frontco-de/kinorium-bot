@@ -1,4 +1,4 @@
-import { type NextFunction } from 'grammy'
+import { type NextFunction } from 'grammy/web'
 import { locales, type SupportedLocale } from '@/helpers/locales'
 import type Context from '@/models/Context'
 
