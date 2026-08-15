@@ -1,8 +1,7 @@
 const tsParser = require('@typescript-eslint/parser')
 const tsPlugin = require('@typescript-eslint/eslint-plugin')
-const importPlugin = require('eslint-plugin-import')
+const importPlugin = require('eslint-plugin-import-x')
 const nPlugin = require('eslint-plugin-n')
-const noRelativeImportPathsPlugin = require('eslint-plugin-no-relative-import-paths')
 const prettierConfig = require('eslint-config-prettier')
 const globals = require('globals')
 
@@ -43,15 +42,27 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
-      import: importPlugin,
+      'import-x': importPlugin,
       n: nPlugin,
-      'no-relative-import-paths': noRelativeImportPathsPlugin,
     },
     rules: {
       'n/no-process-env': 'error',
-      'no-relative-import-paths/no-relative-import-paths': 'error',
-      'import/prefer-default-export': 'error',
-      'import/order': [
+      // Replaces eslint-plugin-no-relative-import-paths, which still calls the
+      // context APIs ESLint 10 removed. `@/`, `@locales/`, and `@migrations/`
+      // stay the only ways to reach repository modules.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message: 'Import repository modules through the @/ alias.',
+            },
+          ],
+        },
+      ],
+      'import-x/prefer-default-export': 'error',
+      'import-x/order': [
         'error',
         {
           alphabetize: { caseInsensitive: false, order: 'asc' },

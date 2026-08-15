@@ -41,16 +41,20 @@
     "@vitest/runner": "^4.1.0",
     "@vitest/snapshot": "^4.1.0",
     "commit-and-tag-version": "^13.1.0",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-n": "^18.3.0",
-    "eslint-plugin-no-relative-import-paths": "^1.0.8",
     "globals": "^17.11.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.0",
     "wrangler": "^4.123.0"
+  },
+  "resolutions": {
+    "brace-expansion@^1.1.7": "^1.1.18",
+    "flatted": "^3.4.4",
+    "picomatch@^4.0.3": "^4.0.5"
   }
 }
