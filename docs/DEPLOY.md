@@ -79,7 +79,7 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 ## 4. Verify
 
 - Send `/start`, `/help`, and `/language` to the test bot.
-- In another chat, enter `@test_bot_username Dune 2021` and select a result.
+- In another chat, enter `@test_bot_username Dune 2026` and select a result.
 - Confirm the selected title, including its quotation marks, links to the language-specific Kinorium domain and that an ongoing series uses `…`.
 - Repeat an identical query within five seconds to exercise Telegram's personal cache. Repeat it after five seconds but within five minutes to exercise the Worker's regional search cache.
 - Check no-result and upstream-error behavior in each affected language.
