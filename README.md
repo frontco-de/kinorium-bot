@@ -2,13 +2,13 @@
 
 A multilingual Telegram bot for finding movies and TV shows through the Kinorium API. The bot works in Telegram inline mode and returns up to ten matching titles with release information, poster thumbnails when available, and links to Kinorium.
 
-The project is written in strict TypeScript and uses [grammY](https://grammy.dev), MongoDB with Typegoose, and YAML-based localization for English, Russian, and Ukrainian.
+The project is written in strict TypeScript and uses [grammY](https://grammy.dev), a Cloudflare Worker webhook, D1 persistence, and YAML localization for English, Russian, and Ukrainian.
 
 ## Prerequisites
 
 - Node.js 24 (see `.nvmrc`)
 - Yarn Classic
-- A running MongoDB instance
+- A free Cloudflare account
 - A Telegram bot token
 - A Kinorium API key
 
@@ -19,22 +19,25 @@ git clone https://github.com/frontco-de/kinorium-bot.git
 cd kinorium-bot
 nvm use
 yarn
-cp .env.sample .env
+cp .dev.vars.example .dev.vars
 ```
 
-Set the required values in `.env`:
+Set the required values in `.dev.vars` and generate a separate random webhook secret:
 
 ```dotenv
 TOKEN=YOUR_TELEGRAM_BOT_TOKEN
-MONGO=mongodb://localhost:27017/test
 APIKEY=YOUR_KINORIUM_API_KEY
+WEBHOOK_SECRET=GENERATE_A_RANDOM_SECRET
 ```
 
-Start MongoDB, then run the bot in watch mode:
+Initialize the local D1 database and run the Worker:
 
 ```sh
+yarn d1:migrate:local
 yarn dev
 ```
+
+The local health endpoint is `http://localhost:8787/health`. Telegram cannot send updates to localhost without a public tunnel, so automated tests are the default local verification path.
 
 ## Using the Bot
 
@@ -51,16 +54,17 @@ Select a result to send its title, type, release year, and Kinorium link. The bo
 
 ## Development Commands
 
-- `yarn dev` — watch TypeScript files and restart after successful compilation.
-- `yarn build-ts` — compile source files into `dist/`.
-- `yarn distribute` — compile and run the built application.
-- `yarn lint` — check formatting and lint rules with zero warnings allowed.
+- `yarn dev` — run the Worker and local D1 database with Wrangler.
+- `yarn test` — run unit and Worker integration tests in the Workers runtime.
+- `yarn lint` — check formatting, ESLint rules, and TypeScript types.
+- `yarn build` — create a local Wrangler deployment bundle without publishing it.
+- `yarn types` — regenerate Worker binding and runtime types after config changes.
 
-Automated tests are not configured yet. Before submitting a change, run `yarn build-ts` and `yarn lint`, then manually verify the affected Telegram flow. See the [contributor reference](docs/contributor-guide.md) for architecture, conventions, and verification guidance.
+See the [contributor reference](docs/contributor-guide.md) for architecture and verification guidance.
 
 ## Deployment
 
-See [docs/DEPLOY.md](docs/DEPLOY.md) for Telegram setup, production secrets, long-polling deployment with systemd, verification, updates, and rollback guidance.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for Cloudflare authentication, D1 migration, secrets, webhook registration, verification, and rollback.
 
 ## License
 

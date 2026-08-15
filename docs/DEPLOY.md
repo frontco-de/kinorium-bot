@@ -1,102 +1,63 @@
 # Deploying the Telegram Bot
 
-The current application uses grammY runner with long polling. Deploy it as one continuously running Node.js process per bot token. It does not expose an HTTP server and is not ready for webhook-only or scale-to-zero hosting without code changes. Telegram documents long polling and webhooks as mutually exclusive update methods; see the [Bot API](https://core.telegram.org/bots/api#getting-updates) and [grammY deployment guide](https://grammy.dev/guide/deployment-types).
+The bot runs as a Cloudflare Worker, receives Telegram webhooks at `/webhook`, and stores language preferences in D1. Use a separate BotFather test bot while validating this branch: one Telegram token cannot use the existing deployment and this webhook simultaneously.
 
-## 1. Prepare Telegram
+## 1. Prepare and Validate
 
-1. Create or select the bot in [@BotFather](https://t.me/BotFather) and copy its token to a password manager.
-2. Send `/setinline` to BotFather, select the bot, and set a search placeholder. Inline mode must be enabled for this bot's primary flow ([Telegram inline bot guide](https://core.telegram.org/bots/inline)).
-3. If this token previously used a webhook, remove that webhook through the Telegram Bot API before starting the service. Do not discard pending updates unless that is intentional.
-
-Never paste the token into tickets, commits, screenshots, or shared shell transcripts.
-
-## 2. Prepare the Host
-
-Use a Linux host with outbound HTTPS access, Node.js 24, Yarn Classic, Git, and access to MongoDB. Create a dedicated non-root service account and application directory; the exact account-management commands depend on the distribution.
-
-Clone and validate the release as that account:
+Install dependencies, authenticate Wrangler, and run all local gates:
 
 ```sh
-git clone https://github.com/frontco-de/kinorium-bot.git /opt/kinorium-bot
-cd /opt/kinorium-bot
-git switch main
+nvm use
 yarn install --frozen-lockfile
-yarn build-ts
+npx wrangler login
+yarn types
 yarn lint
+yarn test
+yarn build
 ```
 
-Do not deploy `node_modules/` or `dist/` from a developer workstation. Build them on the target host or in a trusted CI release job.
+Copy `.dev.vars.example` to `.dev.vars`. Set `TOKEN` to the test bot token, `APIKEY` to the Kinorium key, and generate `WEBHOOK_SECRET` with `openssl rand -hex 32`. Never commit `.dev.vars`. If using a separate test bot, replace the public `BOT_INFO` object in `wrangler.jsonc` with the `result` fields returned by Telegram's `getMe`, then run `yarn types`; restore the production bot metadata before promotion.
 
-## 3. Configure Secrets
+For local development, initialize D1 with `yarn d1:migrate:local`, then run `yarn dev` and check `http://localhost:8787/health`.
 
-Create `/etc/kinorium-bot.env` as a root-owned file. systemd loads it before starting the unprivileged service:
+## 2. Deploy the Worker and D1
 
-```dotenv
-TOKEN=YOUR_TELEGRAM_BOT_TOKEN
-MONGO=mongodb://HOST:27017/DATABASE
-APIKEY=YOUR_KINORIUM_API_KEY
-```
-
-Restrict the file with `sudo chown root:root /etc/kinorium-bot.env` and `sudo chmod 600 /etc/kinorium-bot.env`. Use a least-privilege MongoDB user, require TLS for a remote database, and restrict network access to the database.
-
-## 4. Run with systemd
-
-Create `/etc/systemd/system/kinorium-bot.service`. Replace the user, group, paths, and Node binary path with values from the host (`command -v node`):
-
-```ini
-[Unit]
-Description=Kinorium Telegram bot
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-Type=simple
-User=kinorium-bot
-Group=kinorium-bot
-WorkingDirectory=/opt/kinorium-bot
-EnvironmentFile=/etc/kinorium-bot.env
-ExecStart=/usr/bin/node /opt/kinorium-bot/dist/app.js
-Restart=on-failure
-RestartSec=5
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectHome=true
-ProtectSystem=strict
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Load and start the service:
+Deploy from `feat/cloudflare-worker` while testing. Wrangler automatically provisions the configured D1 database on the first deployment and writes its ID to `wrangler.jsonc`:
 
 ```sh
-sudo systemctl daemon-reload
-sudo systemctl enable --now kinorium-bot
-sudo systemctl status kinorium-bot
-sudo journalctl -u kinorium-bot -n 100 --no-pager
+yarn deploy --secrets-file .dev.vars
+yarn d1:migrate:remote
 ```
 
-The startup log should report a successful MongoDB connection and the bot username. Keep only one active polling deployment for the token during migrations.
+Review and commit the generated D1 `database_id`; it identifies the resource but is not a credential. Record the `https://kinorium-bot.<subdomain>.workers.dev` URL printed by Wrangler. Confirm `<worker-url>/health` returns `{"status":"ok","bot":"<configured_username>"}` before connecting Telegram.
 
-## 5. Verify the Deployment
+## 3. Register the Telegram Webhook
 
-- Send `/start`, `/help`, and `/language` directly to the bot.
-- In another chat, enter `@your_bot_username Dune 2021` and select a result.
-- Check a title with no matches and confirm the localized no-results response.
-- Review logs for initialization, MongoDB, Telegram, or Kinorium errors without exposing secret values.
-
-## Updating and Rolling Back
-
-Record the currently deployed commit before each update. Then fetch the intended revision, install from the lockfile, build, lint, and restart:
+Read the token and webhook secret without putting their values in shell history:
 
 ```sh
-cd /opt/kinorium-bot
-git pull --ff-only origin main
-yarn install --frozen-lockfile
-yarn build-ts
-yarn lint
-sudo systemctl restart kinorium-bot
-sudo systemctl status kinorium-bot
+read -s TOKEN
+read -s WEBHOOK_SECRET
+WORKER_URL=https://kinorium-bot.<subdomain>.workers.dev
+curl --fail-with-body --request POST "https://api.telegram.org/bot${TOKEN}/setWebhook" \
+  --data-urlencode "url=${WORKER_URL}/webhook" \
+  --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
+  --data-urlencode 'allowed_updates=["message","callback_query","inline_query"]'
+curl --fail-with-body "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
+unset TOKEN WEBHOOK_SECRET
 ```
 
-For rollback, check out the previously recorded release commit, repeat installation and build, then restart and re-run the verification checklist. Rotate `TOKEN`, `MONGO`, or `APIKEY` immediately if any secret is exposed.
+Telegram should report the exact HTTPS webhook URL and no `last_error_message`. In BotFather, enable inline mode with `/setinline` if it is disabled.
+
+## 4. Verify
+
+- Send `/start`, `/help`, and `/language` to the test bot.
+- In another chat, enter `@test_bot_username Dune 2021` and select a result.
+- Check no-result and upstream-error behavior in each affected language.
+- Inspect logs with `npx wrangler tail`; logs must not contain tokens, queries, user data, or authenticated URLs.
+
+## Promote, Update, and Roll Back
+
+After validation, merge the feature branch to `main`, deploy that exact commit, apply migrations, and re-register the production bot webhook using its own secrets. For updates, repeat validation, deployment, migration, and smoke tests in that order.
+
+To roll back code, check out the recorded known-good commit and run `yarn deploy`. D1 migrations are forward-only; assess schema compatibility before rollback. To disconnect a test bot, call Telegram's `deleteWebhook` endpoint. Rotate all affected secrets immediately if one is exposed.
