@@ -6,11 +6,21 @@ on:
   pull_request:
     types: [synchronize, opened, reopened]
 
+# The workflow only reads the repository; deployments happen in Cloudflare.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   compile-code:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -20,3 +30,5 @@ jobs:
         run: yarn install --immutable
       - name: Validate Worker
         run: yarn validate
+      - name: Audit dependencies
+        run: yarn npm audit --environment production --all
