@@ -8,7 +8,8 @@ Install dependencies, authenticate Wrangler, and run all local gates:
 
 ```sh
 nvm use
-yarn install --frozen-lockfile
+corepack enable
+yarn install --immutable
 npx wrangler login
 npx wrangler whoami
 yarn validate

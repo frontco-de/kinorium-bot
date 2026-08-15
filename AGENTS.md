@@ -17,7 +17,7 @@ See [docs/contributor-guide.md](docs/contributor-guide.md) for the architecture 
 
 ## Required Workflow
 
-Install with `yarn`, regenerate bindings with `yarn types` after Wrangler changes, migrate local D1 with `yarn d1:migrate:local`, and run locally with `yarn dev`. Before handoff, run `yarn lint`, `yarn test`, and `yarn build`. Add focused Vitest coverage for changed behavior; no numeric coverage threshold is imposed.
+Enable Corepack and install with the repository-pinned Yarn version using `yarn install --immutable`. Regenerate bindings with `yarn types` after Wrangler changes, migrate local D1 with `yarn d1:migrate:local`, and run locally with `yarn dev`. Before handoff, run `yarn lint`, `yarn test`, and `yarn build`. Add focused Vitest coverage for changed behavior; no numeric coverage threshold is imposed.
 
 Use Conventional Commits: `type(scope): imperative summary`, for example `fix(inline): handle empty results`. Use matching kebab-case branch names such as `feat/movie-posters`, `fix/api-timeout`, `refactor/bot-context`, or `chore/update-deps`.
 

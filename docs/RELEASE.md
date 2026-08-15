@@ -28,7 +28,8 @@ Start from a clean, synchronized `main` branch:
 git switch main
 git pull --ff-only
 git fetch --tags
-yarn install --frozen-lockfile
+corepack enable
+yarn install --immutable
 yarn release:dry-run
 yarn release
 ```

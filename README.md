@@ -7,7 +7,7 @@ The project is written in strict TypeScript and uses [grammY](https://grammy.dev
 ## Prerequisites
 
 - Node.js 24 (see `.nvmrc`)
-- Yarn Classic
+- Corepack (provides the pinned Yarn 4.9.1 version)
 - A free Cloudflare account
 - A Telegram bot token
 - A Kinorium API key
@@ -18,6 +18,7 @@ The project is written in strict TypeScript and uses [grammY](https://grammy.dev
 git clone https://github.com/frontco-de/kinorium-bot.git
 cd kinorium-bot
 nvm use
+corepack enable
 yarn
 cp .env.example .env
 ```

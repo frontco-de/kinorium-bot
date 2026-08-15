@@ -14,8 +14,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: yarn
+      - name: Enable Corepack
+        run: corepack enable
       - name: Install modules
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       - name: Validate Worker
         run: yarn validate
