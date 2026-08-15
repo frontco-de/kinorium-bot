@@ -4,6 +4,13 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [
     cloudflareTest({
+      miniflare: {
+        bindings: {
+          TOKEN: '123456789:test-token',
+          APIKEY: 'test-api-key',
+          WEBHOOK_SECRET: 'test-webhook-secret',
+        },
+      },
       wrangler: { configPath: './wrangler.jsonc' },
     }),
   ],
