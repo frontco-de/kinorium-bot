@@ -1,14 +1,14 @@
 /**
  * Usage counters.
  *
- * Both tables bucket by UTC hour, which keeps rolling windows such as the last
- * 24 hours exact while still rolling up into days, and keeps writes
- * proportional to active hours rather than to traffic. Exceeding the D1 daily
- * write allowance would start failing the queries the bot itself depends on.
+ * Both tables bucket by UTC day, so storage grows by at most two counter rows
+ * plus one row per active user per day. Writes stay far below the D1 daily
+ * allowance, whose exhaustion would start failing the queries the bot itself
+ * depends on.
  *
  * `usage_stats` holds counts only. `user_activity` holds one row per user per
- * hour they interacted, which is the smallest shape that can answer "how many
- * distinct users were active" for an arbitrary window.
+ * day they interacted, which is the smallest shape that can answer "how many
+ * distinct users were active" for a window.
  */
 
 /** `api_call` counts Kinorium requests, so cache hits are not searches. */
@@ -43,35 +43,31 @@ interface DailyRow extends UsageRow, UsersRow {
   day?: unknown
 }
 
-const WINDOW_HOURS = {
-  hours24: 24,
-  days7: 24 * 7,
-  days30: 24 * 30,
-  days365: 24 * 365,
+/** `today` covers the current UTC day; the rest are trailing day windows. */
+const WINDOW_DAYS = {
+  today: 1,
+  days7: 7,
+  days30: 30,
+  days365: 365,
 } as const
 
-export type WindowKey = keyof typeof WINDOW_HOURS
+export type WindowKey = keyof typeof WINDOW_DAYS
 
-export const WINDOW_KEYS = Object.keys(WINDOW_HOURS) as WindowKey[]
+export const WINDOW_KEYS = Object.keys(WINDOW_DAYS) as WindowKey[]
 
 const RECENT_DAY_LIMIT = 10
-const MILLISECONDS_PER_HOUR = 60 * 60 * 1000
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 const USAGE_SUMS = `SUM(CASE WHEN event = 'api_call' THEN count ELSE 0 END) AS searches, SUM(CASE WHEN event = 'sent_result' THEN count ELSE 0 END) AS sent_results`
 const DISTINCT_USERS = 'COUNT(DISTINCT user_id) AS users'
 
-/** Buckets are UTC so they align with the daily reset of Cloudflare quotas. */
-export function hourBucket(now: Date = new Date()): string {
-  return now.toISOString().slice(0, 13)
+/** Days are UTC so they align with the daily reset of Cloudflare quotas. */
+export function dayBucket(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10)
 }
 
-/**
- * The oldest bucket a window of `hours` covers. A window of 24 spans the
- * current partial hour plus the 23 before it.
- */
-export function windowStart(hours: number, now: Date = new Date()): string {
-  return hourBucket(
-    new Date(now.getTime() - (hours - 1) * MILLISECONDS_PER_HOUR)
-  )
+/** The oldest day a window covers, counting the current day as the first. */
+export function windowStart(days: number, now: Date = new Date()): string {
+  return dayBucket(new Date(now.getTime() - (days - 1) * MILLISECONDS_PER_DAY))
 }
 
 /** Aggregates over an empty table return a single row of nulls. */
@@ -93,26 +89,24 @@ function toUsageCounts(
 export async function incrementUsageStat(
   db: D1Database,
   event: StatEvent,
-  bucket: string = hourBucket()
+  day: string = dayBucket()
 ): Promise<void> {
   await db
     .prepare(
-      'INSERT INTO usage_stats (bucket, event, count) VALUES (?, ?, 1) ON CONFLICT (bucket, event) DO UPDATE SET count = count + 1'
+      'INSERT INTO usage_stats (day, event, count) VALUES (?, ?, 1) ON CONFLICT (day, event) DO UPDATE SET count = count + 1'
     )
-    .bind(bucket, event)
+    .bind(day, event)
     .run()
 }
 
 export async function recordUserActivity(
   db: D1Database,
   userId: number,
-  bucket: string = hourBucket()
+  day: string = dayBucket()
 ): Promise<void> {
   await db
-    .prepare(
-      'INSERT OR IGNORE INTO user_activity (bucket, user_id) VALUES (?, ?)'
-    )
-    .bind(bucket, userId)
+    .prepare('INSERT OR IGNORE INTO user_activity (day, user_id) VALUES (?, ?)')
+    .bind(day, userId)
     .run()
 }
 
@@ -156,13 +150,13 @@ export async function readStatsSummary(
   dayLimit: number = RECENT_DAY_LIMIT,
   now: Date = new Date()
 ): Promise<StatsSummary> {
-  const cutoffs = WINDOW_KEYS.map((key) => windowStart(WINDOW_HOURS[key], now))
+  const cutoffs = WINDOW_KEYS.map((key) => windowStart(WINDOW_DAYS[key], now))
 
   // The trailing statement of each batch covers all of time.
   const usageResults = await db.batch<UsageRow>([
     ...cutoffs.map((cutoff) =>
       db
-        .prepare(`SELECT ${USAGE_SUMS} FROM usage_stats WHERE bucket >= ?`)
+        .prepare(`SELECT ${USAGE_SUMS} FROM usage_stats WHERE day >= ?`)
         .bind(cutoff)
     ),
     db.prepare(`SELECT ${USAGE_SUMS} FROM usage_stats`),
@@ -170,22 +164,20 @@ export async function readStatsSummary(
   const userResults = await db.batch<UsersRow>([
     ...cutoffs.map((cutoff) =>
       db
-        .prepare(
-          `SELECT ${DISTINCT_USERS} FROM user_activity WHERE bucket >= ?`
-        )
+        .prepare(`SELECT ${DISTINCT_USERS} FROM user_activity WHERE day >= ?`)
         .bind(cutoff)
     ),
     db.prepare('SELECT COUNT(*) AS users FROM users'),
   ])
   const dailyUsage = await db
     .prepare(
-      `SELECT substr(bucket, 1, 10) AS day, ${USAGE_SUMS} FROM usage_stats GROUP BY day ORDER BY day DESC LIMIT ?`
+      `SELECT day, ${USAGE_SUMS} FROM usage_stats GROUP BY day ORDER BY day DESC LIMIT ?`
     )
     .bind(dayLimit)
     .all<DailyRow>()
   const dailyUsers = await db
     .prepare(
-      `SELECT substr(bucket, 1, 10) AS day, ${DISTINCT_USERS} FROM user_activity GROUP BY day ORDER BY day DESC LIMIT ?`
+      `SELECT day, ${DISTINCT_USERS} FROM user_activity GROUP BY day ORDER BY day DESC LIMIT ?`
     )
     .bind(dayLimit)
     .all<DailyRow>()

@@ -1,14 +1,15 @@
 import usersMigration from '@migrations/0001_create_users.sql'
 import migration from '@migrations/0002_create_usage_counters.sql'
+import dailyMigration from '@migrations/0003_daily_usage_counters.sql'
 import { env } from 'cloudflare:workers'
 import { type Update, type UserFromGetMe } from 'grammy/types'
 import { Api } from 'grammy/web'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import createSendStats from '@/handlers/stats'
 import { Localizer } from '@/helpers/i18n'
 import Context from '@/models/Context'
 import {
-  hourBucket,
+  dayBucket,
   incrementUsageStat,
   recordUserActivity,
 } from '@/models/Stats'
@@ -45,18 +46,22 @@ function spyOnReply(ctx: Context) {
 }
 
 describe('stats command', () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
     await env.DB.exec(usersMigration)
     await env.DB.exec(migration)
+    await env.DB.exec(dailyMigration)
+  })
+
+  beforeEach(async () => {
     await env.DB.exec('DELETE FROM usage_stats;')
     await env.DB.exec('DELETE FROM user_activity;')
   })
 
   it('answers the configured admin with every window and recent days', async () => {
-    const bucket = hourBucket()
-    await incrementUsageStat(env.DB, 'api_call', bucket)
-    await incrementUsageStat(env.DB, 'sent_result', bucket)
-    await recordUserActivity(env.DB, 7, bucket)
+    const day = dayBucket()
+    await incrementUsageStat(env.DB, 'api_call', day)
+    await incrementUsageStat(env.DB, 'sent_result', day)
+    await recordUserActivity(env.DB, 7, day)
     const ctx = statsContext(ADMIN_ID)
     const reply = spyOnReply(ctx)
 
@@ -66,14 +71,14 @@ describe('stats command', () => {
     const message = reply.mock.calls[0]?.[0] ?? ''
     expect(message).toContain('Usage statistics')
     expect(message).toContain(
-      'Last 24 h — searches: 1, sent: 1, active users: 1'
+      'Today (UTC) — searches: 1, sent: 1, active users: 1'
     )
     expect(message).toContain('Last 7 days —')
     expect(message).toContain('Last 30 days —')
     expect(message).toContain('Last 365 days —')
     expect(message).toContain('All time —')
     expect(message).toContain('Recent days (searches / sent / active users):')
-    expect(message).toContain(`${bucket.slice(0, 10)}: 1 / 1 / 1`)
+    expect(message).toContain(`${day}: 1 / 1 / 1`)
   })
 
   it('reports an empty database without day lines', async () => {

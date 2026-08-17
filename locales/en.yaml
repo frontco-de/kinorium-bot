@@ -21,7 +21,7 @@ language_selected: <b>This bot</b> now speaks English.
 language_menu_not_yours: This language menu belongs to another user. Send /language to pick your own.
 stats:
   title: '<b>Usage statistics</b>'
-  window_hours24: 'Last 24 h — searches: ${searches}, sent: ${sent}, active users: ${users}'
+  window_today: 'Today (UTC) — searches: ${searches}, sent: ${sent}, active users: ${users}'
   window_days7: 'Last 7 days — searches: ${searches}, sent: ${sent}, active users: ${users}'
   window_days30: 'Last 30 days — searches: ${searches}, sent: ${sent}, active users: ${users}'
   window_days365: 'Last 365 days — searches: ${searches}, sent: ${sent}, active users: ${users}'
