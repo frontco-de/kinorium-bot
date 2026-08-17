@@ -1,6 +1,6 @@
 {
   "name": "kinorium-bot",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "description": "Telegram bot for finding movies and tv-shows on Kinorium",
   "repository": "https://github.com/frontco-de/kinorium-bot",

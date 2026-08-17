@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.4.0](https://github.com/frontco-de/kinorium-bot/compare/v1.3.0...v1.4.0) (2026-08-17)
+
+### Features
+
+- **privacy:** erase data on request, alert the admin, and throttle floods ([841b585](https://github.com/frontco-de/kinorium-bot/commit/841b5857930507bb3860c175cfd4043e8befe45a))
+
 ## [1.3.0](https://github.com/frontco-de/kinorium-bot/compare/v1.2.1...v1.3.0) (2026-08-17)
 
 ### Features
