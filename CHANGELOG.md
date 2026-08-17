@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.3.0](https://github.com/frontco-de/kinorium-bot/compare/v1.2.1...v1.3.0) (2026-08-17)
+
+### Features
+
+- **deploy:** serve the bot from kinorium.frontco.de only ([9dac42e](https://github.com/frontco-de/kinorium-bot/commit/9dac42ec2722d0db8b81b8ede1e2884631a412b4))
+
 ## [1.2.1](https://github.com/frontco-de/kinorium-bot/compare/v1.2.0...v1.2.1) (2026-08-17)
 
 ### Bug Fixes
