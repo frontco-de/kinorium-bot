@@ -4,7 +4,19 @@
   "account_id": "e4b96293222e2f5a31ed954f03743669",
   "main": "src/app.ts",
   "compatibility_date": "2026-08-15",
-  "workers_dev": true,
+  // The Worker answers Telegram on its own hostname only. A custom domain also
+  // makes Cache API operations functional, which `workers.dev` does not
+  // guarantee, and puts the request behind zone WAF rules; see docs/DEPLOY.md.
+  "workers_dev": false,
+  // No preview hostnames either: every public URL is one more surface Telegram
+  // never uses.
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "kinorium.frontco.de",
+      "custom_domain": true,
+    },
+  ],
   "vars": {
     // Public `getMe` metadata.
     "BOT_INFO": {

@@ -55,7 +55,20 @@ npx wrangler secret bulk .env
 yarn deploy
 ```
 
-The D1 `database_id` identifies the resource but is not a credential. Record the `https://kinorium-bot.<subdomain>.workers.dev` URL and Worker version printed by Wrangler. Confirm `<worker-url>/health` returns `{"status":"ok","bot":"<configured_username>"}` before connecting Telegram. Routine deployments do not need to re-upload unchanged secrets.
+The D1 `database_id` identifies the resource but is not a credential. The Worker serves only `https://kinorium.frontco.de`; `workers_dev` and `preview_urls` are both disabled in `wrangler.jsonc`, so no other public hostname exists. Cloudflare creates the DNS record and certificate for the custom domain on first deploy, which takes a moment to become resolvable. Confirm `https://kinorium.frontco.de/health` returns `{"status":"ok","bot":"<configured_username>"}` before connecting Telegram. Routine deployments do not need to re-upload unchanged secrets.
+
+A custom domain is a deliberate requirement rather than cosmetics. Zone rules — WAF custom rules and rate limiting rules — run _before_ the Worker, so traffic they block never starts an invocation and never consumes the daily request allowance. A `workers.dev` hostname bypasses those rules, and its Cache API operations are not guaranteed.
+
+### Restrict the webhook to Telegram
+
+Telegram posts webhooks only from `149.154.160.0/20` and `91.108.4.0/22`, and [documents](https://core.telegram.org/bots/webhooks) that limiting traffic to those ranges is supported. Add a WAF custom rule on the zone that blocks `/webhook` requests from anywhere else:
+
+```txt
+(http.host eq "kinorium.frontco.de" and http.request.uri.path eq "/webhook"
+  and not ip.src in {149.154.160.0/20 91.108.4.0/22})
+```
+
+Action: Block. This is dashboard or API configuration, not Wrangler configuration, so it does not live in this repository — record it here and re-check it whenever the bot stops receiving updates, because Telegram warns the ranges may change. The Worker's own secret-token check stays in place regardless; the rule exists to keep rejected floods from consuming Worker invocations.
 
 ## 3. Register the Telegram Webhook
 
@@ -65,7 +78,7 @@ Load the already configured values without putting their contents in shell histo
 set -a
 source .env
 set +a
-WORKER_URL=https://kinorium-bot.<subdomain>.workers.dev
+WORKER_URL=https://kinorium.frontco.de
 curl --fail-with-body --request POST "https://api.telegram.org/bot${TOKEN}/setWebhook" \
   --data-urlencode "url=${WORKER_URL}/webhook" \
   --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
@@ -91,7 +104,7 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY day DESC LIMIT 4"`).
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
-The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare only guarantees functional cache operations for Workers on custom domains, so on `workers.dev` expect the search cache to be best effort.
+The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
 
 Inline searches are limited to 30 per user per minute per Cloudflare location through the `INLINE_RATE_LIMITER` binding. The counters are location-local and eventually consistent, so the limit protects the Kinorium quota rather than providing exact accounting.
 

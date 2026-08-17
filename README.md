@@ -69,7 +69,7 @@ Messages that are not one of these commands are ignored, so group conversations 
 
 Telegram privately caches completed inline answers for five seconds. The Worker separately caches successful, non-empty Kinorium searches for five minutes, so a successful answer can be up to five minutes old. Empty results and upstream errors remain uncached, so temporary failures and newly indexed titles are not retained as misses.
 
-Cloudflare guarantees functional Cache API operations for Workers on custom domains, and cache entries never leave the data center that wrote them. On a `workers.dev` deployment treat the five-minute search cache as best effort: expect low hit rates, and attach a custom domain if the cache needs to matter.
+The hosted instance runs on the custom domain `kinorium.frontco.de`, where Cloudflare guarantees functional Cache API operations. Cache entries never leave the data center that wrote them, so a request served elsewhere misses independently. A `workers.dev` deployment guarantees nothing about the cache, so treat hit rates there as best effort.
 
 ## Development Commands
 
