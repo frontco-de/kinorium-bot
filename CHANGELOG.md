@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.2.1](https://github.com/frontco-de/kinorium-bot/compare/v1.2.0...v1.2.1) (2026-08-17)
+
+### Bug Fixes
+
+- **stats:** store one row per day instead of per hour ([f44cf6e](https://github.com/frontco-de/kinorium-bot/commit/f44cf6efe7d226efac31e00522975c7ad88e2dfb))
+
 ## [1.2.0](https://github.com/frontco-de/kinorium-bot/compare/v1.1.1...v1.2.0) (2026-08-17)
 
 ### Features
