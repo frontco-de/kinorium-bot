@@ -28,6 +28,9 @@ Log through `src/helpers/logging.ts`. It records the event name and the error's 
 - `migrations/` — versions the D1 schema; never rewrite an applied migration.
 - `src/models/Context.ts` — defines bot-specific context properties and helpers.
 - `src/models/User.ts` — stores the user's language preference.
+- `src/helpers/alerts.ts` and `src/models/Alerts.ts` — message the admin once per error kind per day, event name and error constructor only.
+- `src/handlers/forget.ts` and `deleteUser` in `src/models/User.ts` — self-service erasure of the sender's own rows.
+- `src/middlewares/throttleUpdates.ts` — drops flooding senders before any D1 access, ahead of `attachUser`.
 - `src/models/Stats.ts` — reads and writes `usage_stats` and `user_activity`, both keyed by UTC day so storage stays at one row per day per counter.
 - `src/menus/language.ts` — renders the language picker; `src/menus/ownership.ts` keeps group members out of each other's menus.
 - `src/helpers/searchCache.ts` — validates and stores successful searches in Cloudflare's regional Cache API.

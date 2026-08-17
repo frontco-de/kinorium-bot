@@ -100,13 +100,53 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - Check no-result and upstream-error behavior in each affected language.
 - In a group with two accounts, send `/language` from one and press a button from the other: the second account must see the "menu belongs to another user" alert.
 - Send ordinary group text and confirm no new row appears in D1 (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT COUNT(*) FROM users"`).
-- Send `/stats` from the `ADMIN_ID` account and confirm the counters answer, then send it from another account and confirm silence.
+- Send `/stats` from the `ADMIN_ID` account in a private chat and confirm the counters answer; send it from another account, and from a group, and confirm silence.
+- Send `/forget` from a throwaway account and confirm the reply, then confirm its rows are gone (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT COUNT(*) FROM users"`).
 - After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY day DESC LIMIT 4"`).
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
 The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
 
-Inline searches are limited to 30 per user per minute per Cloudflare location through the `INLINE_RATE_LIMITER` binding. The counters are location-local and eventually consistent, so the limit protects the Kinorium quota rather than providing exact accounting.
+Two limits apply. `UPDATE_RATE_LIMITER` drops updates from one sender above 60 per minute before any database access, so a flood cannot spend the daily D1 allowance the bot needs for its own reads; those updates get no answer at all. `INLINE_RATE_LIMITER` limits inline searches to 30 per user per minute and answers with a "slow down" result, protecting the Kinorium quota. The counters are location-local and eventually consistent, so the limit protects the Kinorium quota rather than providing exact accounting.
+
+## Admin Alerts
+
+The bot messages the `ADMIN_ID` account when a webhook request or an update handler fails. Alerts carry the event name and the error constructor name only, never an error message, update, or query, because those can contain user data and authenticated URLs.
+
+The `alerts` table throttles them: its primary key is `(day, event)`, so the first failure of a kind each UTC day sends a message and the rest are silent inserts. Sending runs in the background and is never retried, so a failing notification cannot amplify the failure it reports; a failed send appears in logs as `admin_alert_failed`.
+
+The admin account must have started a chat with the bot at least once, otherwise Telegram refuses the message with `403` and the alert is dropped. Pair this with a Cloudflare notification on Worker error rate, which still fires when the bot is too broken to message anyone.
+
+## Data Retention and Erasure
+
+`/forget` lets any user erase their own data: the `users` row and every `user_activity` row for that id, in one batch. There is deliberately no way to erase another account, and no HTTP endpoint for it — Telegram already authenticates the sender, so no additional surface is needed. Usage counters hold no personal data and stay intact, which keeps historical totals correct after an erasure.
+
+Retention is manual by choice; no Cron Trigger is configured. To bound `user_activity` growth, prune days older than the longest `/stats` window:
+
+```sh
+npx wrangler d1 execute kinorium-bot --remote --command "DELETE FROM user_activity WHERE day < '2025-08-01'"
+```
+
+Adjust the date; anything older than roughly 400 days is beyond every window `/stats` reports. The same applies to `alerts`, whose rows are only useful for the current day.
+
+## Backups and Recovery
+
+Export before any destructive migration, and delete the dump once the migration is verified:
+
+```sh
+yarn d1:export:remote
+```
+
+The file lands in the gitignored `backups/` directory and contains user ids, so treat it as personal data on disk.
+
+Recovery uses [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/), which retains 30 days without any setup on this side:
+
+```sh
+npx wrangler d1 time-travel info kinorium-bot
+npx wrangler d1 time-travel restore kinorium-bot --bookmark=<bookmark>
+```
+
+Restoring rewinds the whole database, so prefer it for a failed migration rather than for a single unwanted row.
 
 ## Usage Counters and `/stats`
 
