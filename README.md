@@ -31,6 +31,7 @@ Set the required values in `.env` and generate a separate random webhook secret:
 TOKEN=YOUR_TELEGRAM_BOT_TOKEN
 APIKEY=YOUR_KINORIUM_API_KEY
 WEBHOOK_SECRET=GENERATE_A_RANDOM_SECRET
+ADMIN_ID=YOUR_TELEGRAM_USER_ID
 ```
 
 Initialize the local D1 database and run the Worker:
@@ -61,6 +62,8 @@ The quoted title links to the English, Russian, or Ukrainian Kinorium site selec
 - `/start` — show a short inline-search example.
 - `/help` — show detailed usage instructions.
 - `/language` — choose the interface language.
+
+`/stats` reports usage to the account named in `ADMIN_ID` and stays silent for everyone else. It covers the trailing 24 hours, 7 days, 30 days, and 365 days, then all-time totals and up to ten recent days, counting Kinorium requests (so cached searches are excluded), results users selected, and distinct active users. Stored data is counts plus, for active-user math, which hours a user id interacted — never queries.
 
 Messages that are not one of these commands are ignored, so group conversations never reach the database. In a group, only the member who sent `/language` can use the buttons that command produces. Each user may run up to 30 inline searches per minute per Cloudflare location; beyond that the bot answers with a short "slow down" result instead of calling Kinorium.
 

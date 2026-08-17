@@ -14,6 +14,7 @@ The application is a strict TypeScript Telegram bot built with grammY:
 6. Inline queries registered through `src/helpers/bot.ts` check the per-user rate limit in `src/helpers/rateLimit.ts`, then consult `src/helpers/searchCache.ts`, then call the Kinorium integration in `src/helpers/kinorium.ts` on a miss. The integration validates every untrusted record, decodes HTML entities, tolerates missing original titles, and discards records with no usable id or title.
 7. `src/helpers/moviePresentation.ts` formats localized linked titles, years, and original titles; `src/helpers/inlineResult.ts` creates query-specific Telegram result IDs.
 8. Search results become Telegram inline articles; expected no-result, rate-limit, and API-error states remain user-friendly and uncached.
+9. `src/helpers/stats.ts` writes the D1 counters in `src/models/Stats.ts` through `ctx.waitUntil`: one `api_call` per Kinorium request, so cache hits are not searches, one `sent_result` per `chosen_inline_result` update, and one `user_activity` row per sender per hour via `src/middlewares/recordActivity.ts`. `src/handlers/stats.ts` renders trailing windows, all-time totals, and recent days for the `ADMIN_ID` account only.
 
 ## Error Handling and Logging
 
@@ -23,10 +24,11 @@ Log through `src/helpers/logging.ts`. It records the event name and the error's 
 
 ## Key Files
 
-- `wrangler.jsonc` — declares the Worker, the D1 and rate limit bindings, public bot metadata, and the names of the required secrets. The `secrets.required` list is what makes `wrangler types` emit `TOKEN`, `APIKEY`, and `WEBHOOK_SECRET`, so CI generates the same bindings as a local checkout that has a `.env`. Never put secret values here.
+- `wrangler.jsonc` — declares the Worker, the D1 and rate limit bindings, public bot metadata, and the names of the required secrets. The `secrets.required` list is what makes `wrangler types` emit `TOKEN`, `APIKEY`, `WEBHOOK_SECRET`, and `ADMIN_ID`, so CI generates the same bindings as a local checkout that has a `.env`. Never put secret values here.
 - `migrations/` — versions the D1 schema; never rewrite an applied migration.
 - `src/models/Context.ts` — defines bot-specific context properties and helpers.
 - `src/models/User.ts` — stores the user's language preference.
+- `src/models/Stats.ts` — reads and writes `usage_stats` and `user_activity`, both bucketed by UTC hour so trailing windows stay exact.
 - `src/menus/language.ts` — renders the language picker; `src/menus/ownership.ts` keeps group members out of each other's menus.
 - `src/helpers/searchCache.ts` — validates and stores successful searches in Cloudflare's regional Cache API.
 - `src/helpers/moviePresentation.ts` — builds escaped Telegram HTML and localized Kinorium links.
