@@ -1,0 +1,36 @@
+name: Analyze code
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [synchronize, opened, reopened]
+  schedule:
+    # Catches newly published queries against unchanged code.
+    - cron: '37 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef # codeql-bundle-v2.26.3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - name: Analyze
+        uses: github/codeql-action/analyze@c16c0f3f2812ec4bb3750a5ed64873fe2ce0fbef # codeql-bundle-v2.26.3

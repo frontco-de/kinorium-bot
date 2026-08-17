@@ -3,7 +3,7 @@ import Context from '@/models/Context'
 
 export default function handleStart(ctx: Context) {
   return ctx.reply(
-    ctx.i18n.t('start', { username: ctx.me.username }),
+    ctx.i18n.tHtml('start', { username: ctx.me.username }),
     sendOptions(ctx)
   )
 }

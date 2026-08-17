@@ -4,6 +4,9 @@ dist
 .env
 .dev.vars
 .wrangler
+# D1 exports contain user ids, so they are personal data: keep them out of the
+# repository and delete them once a migration is verified.
+backups
 *.log
 
 .DS_Store

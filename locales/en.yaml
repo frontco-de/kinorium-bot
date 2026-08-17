@@ -15,7 +15,16 @@ help: |
   Example: <code>@${username} Dune 2026</code>
 
   /language — change the language
+  /forget — delete the data stored about you
   /help — show these instructions
+
+  The bot stores your language choice and the days you used it, never your searches.
+forget: |
+  <b>Your data has been deleted.</b>
+
+  Removed: language preference, activity records: ${days}.
+
+  Searches were never stored. Using the bot again creates a new record.
 language: Please, select the language.
 language_selected: <b>This bot</b> now speaks English.
 language_menu_not_yours: This language menu belongs to another user. Send /language to pick your own.

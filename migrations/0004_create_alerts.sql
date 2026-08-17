@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS alerts (day TEXT NOT NULL, event TEXT NOT NULL, PRIMARY KEY (day, event));

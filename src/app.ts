@@ -1,4 +1,6 @@
+import { Api } from 'grammy/web'
 import { webhookCallback } from 'grammy/web'
+import createAdminAlerter from '@/helpers/alerts'
 import createBot from '@/helpers/bot'
 import logError from '@/helpers/logging'
 import createSearchCache from '@/helpers/searchCache'
@@ -24,7 +26,14 @@ function isConfiguredSecret(secret: string | undefined): secret is string {
 }
 
 function json(data: unknown, status = 200): Response {
-  return Response.json(data, { status })
+  return Response.json(data, {
+    status,
+    headers: {
+      // Nothing here is cacheable or sniffable: these are machine endpoints.
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
 }
 
 export default {
@@ -37,8 +46,15 @@ export default {
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405)
     }
+    const alerts = createAdminAlerter(
+      new Api(env.TOKEN),
+      env.DB,
+      env.ADMIN_ID,
+      ctx
+    )
     if (!isConfiguredSecret(env.WEBHOOK_SECRET)) {
       logError('webhook_secret_missing')
+      alerts.alert('webhook_secret_missing')
       return json({ error: 'Internal server error' }, 500)
     }
 
@@ -54,7 +70,7 @@ export default {
       const searchCache = createSearchCache(caches.default, ctx, url.origin)
       const stats = createStatsRecorder(env.DB, ctx)
       const handleUpdate = webhookCallback(
-        createBot(env, searchCache, stats),
+        createBot(env, searchCache, stats, alerts),
         'cloudflare-mod',
         {
           onTimeout: 'throw',
@@ -67,6 +83,7 @@ export default {
       return await handleUpdate(request)
     } catch (error) {
       logError('webhook_request_failed', error)
+      alerts.alert('webhook_request_failed', error)
       return json({ error: 'Internal server error' }, 500)
     }
   },

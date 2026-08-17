@@ -61,6 +61,17 @@
         "period": 60,
       },
     },
+    {
+      // Guards the database rather than the Kinorium quota: updates over this
+      // limit are dropped before any D1 read or write. Set above the inline
+      // limit so ordinary typing never reaches it.
+      "name": "UPDATE_RATE_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 60,
+        "period": 60,
+      },
+    },
   ],
   "rules": [
     {

@@ -1,3 +1,4 @@
+import parseAdminId from '@/helpers/admin'
 import logError from '@/helpers/logging'
 import sendOptions from '@/helpers/sendOptions'
 import Context from '@/models/Context'
@@ -8,12 +9,6 @@ import {
   WINDOW_KEYS,
 } from '@/models/Stats'
 
-function parseAdminId(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined
-  const id = Number(value.trim())
-  return Number.isInteger(id) && id > 0 ? id : undefined
-}
-
 function countValues(counts: UsageCounts) {
   return {
     searches: counts.searches,
@@ -23,29 +18,32 @@ function countValues(counts: UsageCounts) {
 }
 
 function formatSummary(ctx: Context, summary: StatsSummary): string {
-  const lines = [ctx.i18n.t('stats.title')]
+  const lines = [ctx.i18n.tHtml('stats.title')]
   for (const key of WINDOW_KEYS) {
     lines.push(
-      ctx.i18n.t(`stats.window_${key}`, countValues(summary.windows[key]))
+      ctx.i18n.tHtml(`stats.window_${key}`, countValues(summary.windows[key]))
     )
   }
-  lines.push(ctx.i18n.t('stats.total', countValues(summary.total)))
+  lines.push(ctx.i18n.tHtml('stats.total', countValues(summary.total)))
 
   if (summary.days.length === 0) {
-    lines.push('', ctx.i18n.t('stats.empty'))
+    lines.push('', ctx.i18n.tHtml('stats.empty'))
     return lines.join('\n')
   }
 
-  lines.push('', ctx.i18n.t('stats.recent'))
+  lines.push('', ctx.i18n.tHtml('stats.recent'))
   for (const day of summary.days) {
-    lines.push(ctx.i18n.t('stats.day', { ...countValues(day), day: day.day }))
+    lines.push(
+      ctx.i18n.tHtml('stats.day', { ...countValues(day), day: day.day })
+    )
   }
   return lines.join('\n')
 }
 
 /**
- * Answers only the account in `ADMIN_ID`. Anyone else is ignored without a
- * reply, so the command does not advertise that it exists.
+ * Answers only the account in `ADMIN_ID`, and only in a private chat so the
+ * figures cannot land in a group. Anyone else is ignored without a reply, so
+ * the command does not advertise that it exists.
  */
 export default function createSendStats(
   db: D1Database,
@@ -58,7 +56,7 @@ export default function createSendStats(
       logError('stats_admin_not_configured')
       return
     }
-    if (ctx.from?.id !== admin) return
+    if (ctx.from?.id !== admin || ctx.chat?.type !== 'private') return
 
     const summary = await readStatsSummary(db)
     await ctx.reply(formatSummary(ctx, summary), sendOptions(ctx))

@@ -23,16 +23,20 @@ function buildContext(update: Partial<Update>): Context {
 }
 
 function messageUpdate(text: string, isCommand: boolean): Partial<Update> {
+  const message = {
+    message_id: 1,
+    date: 0,
+    chat: groupChat,
+    from: sender,
+    text,
+  }
+  if (!isCommand) return { message }
   return {
     message: {
-      message_id: 1,
-      date: 0,
-      chat: groupChat,
-      from: sender,
-      text,
-      entities: isCommand
-        ? [{ type: 'bot_command' as const, offset: 0, length: text.length }]
-        : undefined,
+      ...message,
+      entities: [
+        { type: 'bot_command' as const, offset: 0, length: text.length },
+      ],
     },
   }
 }

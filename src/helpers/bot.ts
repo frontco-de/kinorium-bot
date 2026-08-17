@@ -1,8 +1,10 @@
 import { Bot, InlineQueryResultBuilder as R } from 'grammy/web'
+import forgetMe from '@/handlers/forget'
 import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import sendStart from '@/handlers/start'
 import createSendStats from '@/handlers/stats'
+import { type AdminAlerter } from '@/helpers/alerts'
 import localize from '@/helpers/i18n'
 import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
@@ -24,6 +26,7 @@ import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
 import ignoreUnhandledUpdates from '@/middlewares/ignoreUnhandledUpdates'
 import recordActivity from '@/middlewares/recordActivity'
+import throttleUpdates from '@/middlewares/throttleUpdates'
 import Context from '@/models/Context'
 
 const INLINE_QUERY_CACHE_TIME_SECONDS = 5
@@ -32,6 +35,7 @@ const POSTER_THUMBNAIL_SIZE = '200'
 
 function buildCommandHandlers(env: CloudflareBindings) {
   return {
+    forget: forgetMe,
     help: sendHelp,
     language: handleLanguage,
     start: sendStart,
@@ -150,7 +154,8 @@ function registerInlineQueryHandlers(
 export default function createBot(
   env: CloudflareBindings,
   searchCache: KinoriumSearchCache,
-  stats: StatsRecorder
+  stats: StatsRecorder,
+  alerts: AdminAlerter
 ): Bot<Context> {
   const bot = new Bot<Context>(env.TOKEN, {
     ContextConstructor: Context,
@@ -159,6 +164,8 @@ export default function createBot(
   const commandHandlers = buildCommandHandlers(env)
 
   bot.use(ignoreUnhandledUpdates(Object.keys(commandHandlers)))
+  // Flood control precedes every database access on purpose.
+  bot.use(throttleUpdates(env.UPDATE_RATE_LIMITER))
   bot.use(attachUser(env.DB))
   bot.use(recordActivity(stats))
   bot.use(localize)
@@ -183,6 +190,7 @@ export default function createBot(
     // Swallowed on purpose: rethrowing makes the webhook answer 500, and
     // Telegram then redelivers the same update ahead of every later one.
     logError('telegram_update_failed', error.error)
+    alerts.alert('telegram_update_failed', error.error)
   })
 
   return bot

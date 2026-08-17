@@ -62,3 +62,19 @@ export async function updateUserLanguage(
   if (result.meta.changes !== 1) throw new Error(`User ${id} not found`)
   return { id, language }
 }
+
+/**
+ * Removes every row that identifies a user: the account row and its activity
+ * days. Usage counters hold no user data and stay untouched, so the totals
+ * remain correct after an erasure.
+ */
+export async function deleteUser(
+  db: D1Database,
+  id: number
+): Promise<{ activityDays: number }> {
+  const [activity] = await db.batch([
+    db.prepare('DELETE FROM user_activity WHERE user_id = ?').bind(id),
+    db.prepare('DELETE FROM users WHERE id = ?').bind(id),
+  ])
+  return { activityDays: activity?.meta.changes ?? 0 }
+}

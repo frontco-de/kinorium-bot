@@ -8,7 +8,7 @@ class Context extends BaseContext {
   dbuser!: User
 
   replyWithLocalization: this['reply'] = (text, other, ...rest) => {
-    text = this.i18n.t(text)
+    text = this.i18n.tHtml(text)
     return this.reply(text, other, ...rest)
   }
 }

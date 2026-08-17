@@ -33,6 +33,8 @@ describe('Worker HTTP interface', () => {
     const response = await SELF.fetch('https://example.com/health')
 
     expect(response.status).toBe(200)
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
     await expect(response.json()).resolves.toEqual({
       status: 'ok',
       bot: env.BOT_INFO.username,

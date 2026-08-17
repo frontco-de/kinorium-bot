@@ -8,11 +8,13 @@ export interface KinoriumMovieWithUrl {
   name: string
   name_orig: string
   url: string
-  year?: number
-  year_serial_b?: number
-  year_serial_e?: number
-  isSerial?: boolean
-  poster?: string
+  // Explicit `undefined` because validation yields a value for every field,
+  // present or not, and `exactOptionalPropertyTypes` distinguishes the two.
+  year?: number | undefined
+  year_serial_b?: number | undefined
+  year_serial_e?: number | undefined
+  isSerial?: boolean | undefined
+  poster?: string | undefined
 }
 
 interface KinoriumError {

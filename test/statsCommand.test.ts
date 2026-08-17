@@ -22,13 +22,16 @@ const botInfo = {
   username: 'kinorium_bot',
 } as UserFromGetMe
 
-function statsContext(senderId: number): Context {
+function statsContext(
+  senderId: number,
+  chatType: 'private' | 'group' = 'private'
+): Context {
   const update = {
     update_id: 1,
     message: {
       message_id: 1,
       date: 0,
-      chat: { id: senderId, type: 'private' },
+      chat: { id: senderId, type: chatType },
       from: { id: senderId, is_bot: false, first_name: 'Sender' },
       text: '/stats',
       entities: [{ type: 'bot_command', offset: 0, length: 6 }],
@@ -90,6 +93,15 @@ describe('stats command', () => {
     const message = reply.mock.calls[0]?.[0] ?? ''
     expect(message).toContain('Nothing recorded yet.')
     expect(message).not.toContain('Recent days')
+  })
+
+  it('stays silent outside a private chat, even for the admin', async () => {
+    const ctx = statsContext(ADMIN_ID, 'group')
+    const reply = spyOnReply(ctx)
+
+    await createSendStats(env.DB, String(ADMIN_ID))(ctx)
+
+    expect(reply).not.toHaveBeenCalled()
   })
 
   it('ignores every other account', async () => {

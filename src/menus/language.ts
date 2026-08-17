@@ -16,7 +16,7 @@ locales.forEach(({ code, name }, index) => {
 export function registerLanguageMenu(bot: Bot<Context>): void {
   bot.callbackQuery(/^language:(.+)$/, async (ctx) => {
     const languageCode = ctx.match[1]
-    if (!isSupportedLocale(languageCode)) {
+    if (languageCode === undefined || !isSupportedLocale(languageCode)) {
       await ctx.answerCallbackQuery()
       return
     }
@@ -31,9 +31,10 @@ export function registerLanguageMenu(bot: Bot<Context>): void {
     ctx.dbuser = await updateUserLanguage(ctx.db, ctx.dbuser.id, languageCode)
     ctx.i18n.locale(ctx.dbuser.language)
     await ctx.answerCallbackQuery()
-    await ctx.editMessageText(ctx.i18n.t('language_selected'), {
+    // Editing without `reply_markup` drops the keyboard, so the menu cannot be
+    // pressed again after the choice is made.
+    await ctx.editMessageText(ctx.i18n.tHtml('language_selected'), {
       parse_mode: 'HTML',
-      reply_markup: undefined,
     })
   })
 }
