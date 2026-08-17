@@ -88,7 +88,7 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - In a group with two accounts, send `/language` from one and press a button from the other: the second account must see the "menu belongs to another user" alert.
 - Send ordinary group text and confirm no new row appears in D1 (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT COUNT(*) FROM users"`).
 - Send `/stats` from the `ADMIN_ID` account and confirm the counters answer, then send it from another account and confirm silence.
-- After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY bucket DESC LIMIT 4"`).
+- After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY day DESC LIMIT 4"`).
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
 The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare only guarantees functional cache operations for Workers on custom domains, so on `workers.dev` expect the search cache to be best effort.
@@ -97,13 +97,13 @@ Inline searches are limited to 30 per user per minute per Cloudflare location th
 
 ## Usage Counters and `/stats`
 
-`usage_stats` holds one row per UTC hour and event. `api_call` counts requests actually sent to Kinorium, so cache hits are excluded and the number tracks upstream quota rather than keystrokes. `sent_result` counts inline results a user selected. `user_activity` holds one row per user per hour they interacted, which is what makes "active users" answerable for any window. Hourly buckets keep the trailing 24 hours exact and still roll up into days.
+`usage_stats` holds one row per UTC day and event. `api_call` counts requests actually sent to Kinorium, so cache hits are excluded and the number tracks upstream quota rather than keystrokes. `sent_result` counts inline results a user selected. `user_activity` holds one row per user per day they interacted, which is what makes "active users" answerable for any window. Storage therefore grows by at most two counter rows plus one row per active user per day.
 
-`/stats` reports the trailing 24 hours, 7 days, 30 days, and 365 days, then all-time totals, then up to ten recent days. Window user counts are distinct active users; the all-time user count is registered accounts from the `users` table.
+`/stats` reports the current UTC day, then the trailing 7, 30, and 365 days, then all-time totals, then up to ten recent days. Window user counts are distinct active users; the all-time user count is registered accounts from the `users` table. Because rows are daily, the first line covers today since 00:00 UTC rather than a rolling 24 hours.
 
 `/stats` answers the single account in the `ADMIN_ID` secret and silently ignores everyone else, so the command never reveals that it exists. Set it to your numeric Telegram user id and upload it like the other secrets. When it is unset the command answers nobody and the Worker logs `stats_admin_not_configured`.
 
-Writes run through `ctx.waitUntil`, so a D1 failure cannot delay or break an answer to Telegram; failures appear in logs as `stats_write_failed` or `user_activity_write_failed`. `user_activity` is the only table that pairs a user id with a timestamp; queries and result ids are never stored, and old rows can be pruned with a `DELETE FROM user_activity WHERE bucket < ?` without affecting the search or sent counters.
+Writes run through `ctx.waitUntil`, so a D1 failure cannot delay or break an answer to Telegram; failures appear in logs as `stats_write_failed` or `user_activity_write_failed`. `user_activity` is the only table that pairs a user id with a date; queries and result ids are never stored, and old rows can be pruned with a `DELETE FROM user_activity WHERE day < ?` without affecting the search or sent counters.
 
 ## Automatic Deployments from `main`
 

@@ -63,7 +63,7 @@ The quoted title links to the English, Russian, or Ukrainian Kinorium site selec
 - `/help` — show detailed usage instructions.
 - `/language` — choose the interface language.
 
-`/stats` reports usage to the account named in `ADMIN_ID` and stays silent for everyone else. It covers the trailing 24 hours, 7 days, 30 days, and 365 days, then all-time totals and up to ten recent days, counting Kinorium requests (so cached searches are excluded), results users selected, and distinct active users. Stored data is counts plus, for active-user math, which hours a user id interacted — never queries.
+`/stats` reports usage to the account named in `ADMIN_ID` and stays silent for everyone else. It covers the current UTC day, the trailing 7, 30, and 365 days, then all-time totals and up to ten recent days, counting Kinorium requests (so cached searches are excluded), results users selected, and distinct active users. Stored data is one row per day and counter, plus one row per active user per day — never queries.
 
 Messages that are not one of these commands are ignored, so group conversations never reach the database. In a group, only the member who sent `/language` can use the buttons that command produces. Each user may run up to 30 inline searches per minute per Cloudflare location; beyond that the bot answers with a short "slow down" result instead of calling Kinorium.
 
