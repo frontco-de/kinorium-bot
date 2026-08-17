@@ -14,6 +14,7 @@ export default function ignoreUnhandledUpdates(
   return (ctx, next) => {
     const isHandled =
       ctx.inlineQuery !== undefined ||
+      ctx.chosenInlineResult !== undefined ||
       ctx.callbackQuery !== undefined ||
       ctx.hasCommand(commands)
     if (!isHandled) return

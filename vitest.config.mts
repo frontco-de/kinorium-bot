@@ -9,6 +9,7 @@ export default defineConfig({
           TOKEN: '123456789:test-token',
           APIKEY: 'test-api-key',
           WEBHOOK_SECRET: 'test-webhook-secret',
+          ADMIN_ID: '42',
         },
       },
       wrangler: { configPath: './wrangler.jsonc' },

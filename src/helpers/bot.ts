@@ -2,6 +2,7 @@ import { Bot, InlineQueryResultBuilder as R } from 'grammy/web'
 import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import sendStart from '@/handlers/start'
+import createSendStats from '@/handlers/stats'
 import localize from '@/helpers/i18n'
 import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
@@ -17,20 +18,25 @@ import {
   type MovieLabels,
 } from '@/helpers/moviePresentation'
 import isWithinRateLimit from '@/helpers/rateLimit'
+import { type StatsRecorder } from '@/helpers/stats'
 import { registerLanguageMenu } from '@/menus/language'
 import attachUser from '@/middlewares/attachUser'
 import configureI18n from '@/middlewares/configureI18n'
 import ignoreUnhandledUpdates from '@/middlewares/ignoreUnhandledUpdates'
+import recordActivity from '@/middlewares/recordActivity'
 import Context from '@/models/Context'
 
 const INLINE_QUERY_CACHE_TIME_SECONDS = 5
 const INLINE_RESULT_LIMIT = 10
 const POSTER_THUMBNAIL_SIZE = '200'
 
-const commandHandlers = {
-  help: sendHelp,
-  language: handleLanguage,
-  start: sendStart,
+function buildCommandHandlers(env: CloudflareBindings) {
+  return {
+    help: sendHelp,
+    language: handleLanguage,
+    start: sendStart,
+    stats: createSendStats(env.DB, env.ADMIN_ID),
+  }
 }
 
 type InlineResult = ReturnType<typeof buildInlineErrorResult>
@@ -76,7 +82,8 @@ function registerInlineQueryHandlers(
   bot: Bot<Context>,
   apiKey: string,
   rateLimiter: RateLimit,
-  searchCache: KinoriumSearchCache
+  searchCache: KinoriumSearchCache,
+  stats: StatsRecorder
 ): void {
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
@@ -101,7 +108,10 @@ function registerInlineQueryHandlers(
         apiKey,
         ctx.dbuser.language,
         fetch,
-        searchCache
+        searchCache,
+        () => {
+          stats.record('api_call')
+        }
       )
 
       if (searchResult.kind === 'error') {
@@ -139,15 +149,18 @@ function registerInlineQueryHandlers(
 
 export default function createBot(
   env: CloudflareBindings,
-  searchCache: KinoriumSearchCache
+  searchCache: KinoriumSearchCache,
+  stats: StatsRecorder
 ): Bot<Context> {
   const bot = new Bot<Context>(env.TOKEN, {
     ContextConstructor: Context,
     botInfo: env.BOT_INFO,
   })
+  const commandHandlers = buildCommandHandlers(env)
 
   bot.use(ignoreUnhandledUpdates(Object.keys(commandHandlers)))
   bot.use(attachUser(env.DB))
+  bot.use(recordActivity(stats))
   bot.use(localize)
   bot.use(configureI18n)
   registerLanguageMenu(bot)
@@ -155,8 +168,14 @@ export default function createBot(
     bot,
     env.APIKEY,
     env.INLINE_RATE_LIMITER,
-    searchCache
+    searchCache,
+    stats
   )
+  // Telegram only sends this update while inline feedback is enabled in
+  // BotFather; see docs/DEPLOY.md.
+  bot.on('chosen_inline_result', () => {
+    stats.record('sent_result')
+  })
   for (const [command, handler] of Object.entries(commandHandlers)) {
     bot.command(command, handler)
   }

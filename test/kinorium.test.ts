@@ -87,6 +87,47 @@ describe('Kinorium search', () => {
     expect(setCache).not.toHaveBeenCalled()
   })
 
+  it('reports one API call per upstream request', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json({ movie_list: [] }))
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: vi.fn<KinoriumSearchCache['set']>(),
+    }
+    const onApiCall = vi.fn()
+
+    await searchMoviesDetailed(
+      'Dune',
+      'secret',
+      'en',
+      fetcher,
+      searchCache,
+      onApiCall
+    )
+
+    expect(onApiCall).toHaveBeenCalledOnce()
+  })
+
+  it('does not report an API call for a cache hit', async () => {
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue({ kind: 'ok', movies: [] }),
+      set: vi.fn<KinoriumSearchCache['set']>(),
+    }
+    const onApiCall = vi.fn()
+
+    await searchMoviesDetailed(
+      'Dune',
+      'secret',
+      'en',
+      vi.fn<typeof fetch>(),
+      searchCache,
+      onApiCall
+    )
+
+    expect(onApiCall).not.toHaveBeenCalled()
+  })
+
   it('classifies an expected empty response', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

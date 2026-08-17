@@ -69,6 +69,18 @@ describe('unhandled update filter', () => {
     await expect(run(update)).resolves.toHaveBeenCalled()
   })
 
+  it('passes chosen inline results so sent results are counted', async () => {
+    const update = {
+      chosen_inline_result: {
+        result_id: 'q1:123',
+        from: sender,
+        query: 'Dune',
+      },
+    }
+
+    await expect(run(update)).resolves.toHaveBeenCalled()
+  })
+
   it('drops group chatter before it reaches the database', async () => {
     await expect(
       run(messageUpdate('just talking in a group', false))

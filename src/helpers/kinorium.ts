@@ -224,6 +224,8 @@ function isNoResultsError(error: KinoriumError): boolean {
 /**
  * Search for movies using the Kinorium API
  * @param query - Search query string
+ * @param onApiCall - Called once per upstream request, so cache hits are not
+ * counted as searches
  * @returns Promise with result kind + movies
  */
 export async function searchMoviesDetailed(
@@ -231,7 +233,8 @@ export async function searchMoviesDetailed(
   apiKey: string,
   language: SupportedLocale,
   fetcher: Fetcher = fetch,
-  searchCache?: KinoriumSearchCache
+  searchCache?: KinoriumSearchCache,
+  onApiCall?: () => void
 ): Promise<KinoriumSearchResult> {
   try {
     const cachedResult = await searchCache?.get(query, language)
@@ -247,6 +250,7 @@ export async function searchMoviesDetailed(
     const kinoriumLocale = KINORIUM_LOCALES[language]
     const url = `https://db.kinorium.com/search/?apikey=${encodedApiKey}&q=${encodedQuery}&lng=${kinoriumLocale}`
 
+    onApiCall?.()
     const response = await fetchWithTimeout(fetcher, url)
 
     if (!response.ok) {

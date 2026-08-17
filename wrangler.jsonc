@@ -28,7 +28,7 @@
   // generation stays identical with and without a local `.env`. Values live in
   // Cloudflare secrets; see docs/DEPLOY.md.
   "secrets": {
-    "required": ["TOKEN", "APIKEY", "WEBHOOK_SECRET"],
+    "required": ["TOKEN", "APIKEY", "WEBHOOK_SECRET", "ADMIN_ID"],
   },
   "d1_databases": [
     {

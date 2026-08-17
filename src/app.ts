@@ -2,6 +2,7 @@ import { webhookCallback } from 'grammy/web'
 import createBot from '@/helpers/bot'
 import logError from '@/helpers/logging'
 import createSearchCache from '@/helpers/searchCache'
+import createStatsRecorder from '@/helpers/stats'
 
 const encoder = new TextEncoder()
 
@@ -51,8 +52,9 @@ export default {
 
     try {
       const searchCache = createSearchCache(caches.default, ctx, url.origin)
+      const stats = createStatsRecorder(env.DB, ctx)
       const handleUpdate = webhookCallback(
-        createBot(env, searchCache),
+        createBot(env, searchCache, stats),
         'cloudflare-mod',
         {
           onTimeout: 'throw',
