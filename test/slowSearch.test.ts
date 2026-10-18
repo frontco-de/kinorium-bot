@@ -142,6 +142,32 @@ describe('slow Kinorium search', () => {
     )
   })
 
+  it('shows "No results" on the retry instead of searching forever', async () => {
+    const network = stubNetwork()
+    const executionContext = createExecutionContext()
+    const firstDelivery = worker.fetch(
+      inlineQueryRequest('zzzz nothing', 4),
+      { ...env, SLOW_SEARCH_FALLBACK: 'true' },
+      executionContext
+    )
+    await vi.waitFor(() => {
+      expect(network.kinoriumCalls()).toBe(1)
+    })
+    await vi.advanceTimersByTimeAsync(4_000)
+    await firstDelivery
+
+    network.releaseKinorium({ error: { code: 404, message: 'Not found' } })
+    await waitOnExecutionContext(executionContext)
+
+    await deliver(inlineQueryRequest('zzzz nothing', 5), {
+      ...env,
+      SLOW_SEARCH_FALLBACK: 'true',
+    })
+    expect(network.kinoriumCalls()).toBe(1)
+    expect(network.answers).toHaveLength(2)
+    expect(network.answers[1]?.results[0]?.id).toBe('no-results')
+  })
+
   it('keeps waiting for Kinorium when the flag is off', async () => {
     const network = stubNetwork()
     const executionContext = createExecutionContext()

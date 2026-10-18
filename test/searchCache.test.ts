@@ -81,4 +81,71 @@ describe('Kinorium search cache', () => {
     }
     expect(firstKey.url).not.toBe(secondKey.url)
   })
+
+  it('remembers a search without results for one minute only', async () => {
+    const cache = {
+      match: vi.fn<Cache['match']>(),
+      put: vi.fn<Cache['put']>().mockResolvedValue(undefined),
+    }
+    const backgroundTasks: Promise<unknown>[] = []
+    const searchCache = createSearchCache(
+      cache,
+      {
+        waitUntil: vi.fn((promise: Promise<unknown>) => {
+          backgroundTasks.push(promise)
+        }),
+      },
+      'https://example.com'
+    )
+
+    searchCache.set('Nothing', 'en', { kind: 'no_results', movies: [] })
+    await Promise.all(backgroundTasks)
+
+    const response = cache.put.mock.calls[0]?.[1]
+    if (!response) throw new Error('Expected cache write')
+    expect(response.headers.get('Cache-Control')).toBe('max-age=60')
+    await expect(response.json()).resolves.toEqual({
+      kind: 'no_results',
+      movies: [],
+    })
+  })
+
+  it('reads a cached search without results', async () => {
+    const cache = {
+      match: vi
+        .fn<Cache['match']>()
+        .mockImplementation(() =>
+          Promise.resolve(Response.json({ kind: 'no_results', movies: [] }))
+        ),
+      put: vi.fn<Cache['put']>(),
+    }
+    const searchCache = createSearchCache(
+      cache,
+      { waitUntil: vi.fn() },
+      'https://example.com'
+    )
+
+    await expect(searchCache.get('Nothing', 'en')).resolves.toEqual({
+      kind: 'no_results',
+      movies: [],
+    })
+  })
+
+  it('ignores a cached entry that is neither a result nor empty', async () => {
+    const cache = {
+      match: vi
+        .fn<Cache['match']>()
+        .mockImplementation(() =>
+          Promise.resolve(Response.json({ kind: 'error', movies: [] }))
+        ),
+      put: vi.fn<Cache['put']>(),
+    }
+    const searchCache = createSearchCache(
+      cache,
+      { waitUntil: vi.fn() },
+      'https://example.com'
+    )
+
+    await expect(searchCache.get('Dune', 'en')).resolves.toBeUndefined()
+  })
 })

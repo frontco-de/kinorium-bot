@@ -105,7 +105,7 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY day DESC LIMIT 4"`).
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
-The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
+The Worker caches successful searches for five minutes and searches with no results for one minute; upstream errors are never cached. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
 
 ## Slow Search Fallback
 

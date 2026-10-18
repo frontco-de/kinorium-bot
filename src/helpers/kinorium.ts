@@ -216,7 +216,7 @@ export interface KinoriumSearchCache {
   set(
     query: string,
     language: SupportedLocale,
-    result: Extract<KinoriumSearchResult, { kind: 'ok' }>
+    result: Extract<KinoriumSearchResult, { kind: 'ok' | 'no_results' }>
   ): void
 }
 
@@ -290,7 +290,12 @@ async function runSearch(
     if (data.error !== undefined && data.error !== null) {
       const error = toKinoriumError(data.error)
       if (error && isNoResultsError(error)) {
-        return { kind: 'no_results', movies: [] }
+        const noResults: Extract<KinoriumSearchResult, { kind: 'no_results' }> =
+          { kind: 'no_results', movies: [] }
+        // Remembered briefly so a slow search that found nothing answers "No
+        // results" on the retry instead of starting over.
+        searchCache?.set(query, language, noResults)
+        return noResults
       }
       return { kind: 'error', movies: [] }
     }

@@ -74,7 +74,7 @@ The bot also messages the `ADMIN_ID` account when it fails, at most once per err
 
 Messages that are not one of these commands are ignored, so group conversations never reach the database. In a group, only the member who sent `/language` can use the buttons that command produces. Each user may run up to 30 inline searches per minute per Cloudflare location; beyond that the bot answers with a short "slow down" result instead of calling Kinorium. A second, higher limit of 60 updates per minute drops updates before any database access, so flooding cannot exhaust the daily database allowance.
 
-Telegram privately caches completed inline answers for five seconds. The Worker separately caches successful, non-empty Kinorium searches for five minutes, so a successful answer can be up to five minutes old. Empty results and upstream errors remain uncached, so temporary failures and newly indexed titles are not retained as misses.
+Telegram privately caches completed inline answers for five seconds. The Worker separately caches successful Kinorium searches for five minutes, so a successful answer can be up to five minutes old. A search with no results is remembered for one minute, so a slow search that found nothing answers "No results" on the retry. Upstream errors remain uncached, so temporary failures are not retained.
 
 The hosted instance runs on the custom domain `kinorium.frontco.de`, where Cloudflare guarantees functional Cache API operations. Cache entries never leave the data center that wrote them, so a request served elsewhere misses independently. A `workers.dev` deployment guarantees nothing about the cache, so treat hit rates there as best effort.
 

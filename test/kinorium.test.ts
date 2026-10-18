@@ -144,6 +144,27 @@ describe('Kinorium search', () => {
     await expect(
       searchMoviesDetailed('missing', 'secret', 'en', fetcher, searchCache)
     ).resolves.toEqual({ kind: 'no_results', movies: [] })
+    expect(setCache).toHaveBeenCalledWith('missing', 'en', {
+      kind: 'no_results',
+      movies: [],
+    })
+  })
+
+  it('never caches an upstream error', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json({ error: { code: 500, message: 'Internal failure' } })
+      )
+    const setCache = vi.fn<KinoriumSearchCache['set']>()
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: setCache,
+    }
+
+    await expect(
+      searchMoviesDetailed('dune', 'secret', 'en', fetcher, searchCache)
+    ).resolves.toEqual({ kind: 'error', movies: [] })
     expect(setCache).not.toHaveBeenCalled()
   })
 
