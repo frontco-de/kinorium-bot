@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.5.0](https://github.com/frontco-de/kinorium-bot/compare/v1.4.0...v1.5.0) (2026-10-18)
+
+### Features
+
+- **inline:** answer slow searches with "still searching" behind a flag ([#8](https://github.com/frontco-de/kinorium-bot/issues/8)) ([e3c51e6](https://github.com/frontco-de/kinorium-bot/commit/e3c51e6ad42680d3cdc0abbdaca80e81c3f1e527))
+- **inline:** share identical in-flight searches and log answer delay ([#10](https://github.com/frontco-de/kinorium-bot/issues/10)) ([fb5c138](https://github.com/frontco-de/kinorium-bot/commit/fb5c1382e2b9cc484046a3258fca8d1cf8b0352c))
+- **logging:** record Kinorium search duration and status ([#7](https://github.com/frontco-de/kinorium-bot/issues/7)) ([816953e](https://github.com/frontco-de/kinorium-bot/commit/816953e23517861ca489a63d957ae7485cb5eeb1))
+
+### Bug Fixes
+
+- **deps:** bump js-yaml to 5.4.1 for GHSA-r3ph-w7gj-g6xm ([#4](https://github.com/frontco-de/kinorium-bot/issues/4)) ([8a91852](https://github.com/frontco-de/kinorium-bot/commit/8a918529c3e42a35a6c5e596dbc8648f915c4e0d))
+- **inline:** hand a search to the background after 5s ([#9](https://github.com/frontco-de/kinorium-bot/issues/9)) ([da74837](https://github.com/frontco-de/kinorium-bot/commit/da748374bd8417b8998836b8012da4a167ce755e))
+- **kinorium:** treat a null response as "no results" ([#11](https://github.com/frontco-de/kinorium-bot/issues/11)) ([2dd2e59](https://github.com/frontco-de/kinorium-bot/commit/2dd2e596ae6615eb5601c4a0af6e998f199764b3))
+- **webhook:** handle BotError outside bot.catch ([#3](https://github.com/frontco-de/kinorium-bot/issues/3)) ([ed1271b](https://github.com/frontco-de/kinorium-bot/commit/ed1271bb1e4dcd766d9962c68417c1268595f24d))
+
 ## [1.4.0](https://github.com/frontco-de/kinorium-bot/compare/v1.3.0...v1.4.0) (2026-08-17)
 
 ### Features
