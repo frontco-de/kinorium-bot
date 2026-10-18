@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  type DeferredSearch,
   type KinoriumSearchCache,
   searchMoviesDetailed,
 } from '@/helpers/kinorium'
@@ -143,6 +144,27 @@ describe('Kinorium search', () => {
     await expect(
       searchMoviesDetailed('missing', 'secret', 'en', fetcher, searchCache)
     ).resolves.toEqual({ kind: 'no_results', movies: [] })
+    expect(setCache).toHaveBeenCalledWith('missing', 'en', {
+      kind: 'no_results',
+      movies: [],
+    })
+  })
+
+  it('never caches an upstream error', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json({ error: { code: 500, message: 'Internal failure' } })
+      )
+    const setCache = vi.fn<KinoriumSearchCache['set']>()
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: setCache,
+    }
+
+    await expect(
+      searchMoviesDetailed('dune', 'secret', 'en', fetcher, searchCache)
+    ).resolves.toEqual({ kind: 'error', movies: [] })
     expect(setCache).not.toHaveBeenCalled()
   })
 
@@ -349,6 +371,155 @@ describe('Kinorium search', () => {
       expect(loggedEvents(log)).toEqual([
         { event: 'kinorium_search_failed', error: 'AbortError', ms: 7_000 },
       ])
+    })
+  })
+
+  describe('deferred search', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    const movieList = {
+      movie_list: [{ id: 7, mixtype: 'movie', name: 'Dune' }],
+    }
+
+    function deferredSearch() {
+      const waitUntil = vi.fn<DeferredSearch['waitUntil']>()
+      return { deadlineMs: 4_000, waitUntil }
+    }
+
+    function cacheSpy() {
+      const set = vi.fn<KinoriumSearchCache['set']>()
+      const searchCache: KinoriumSearchCache = {
+        get: vi.fn().mockResolvedValue(undefined),
+        set,
+      }
+      return { searchCache, set }
+    }
+
+    function slowFetcher(ms: number, body: unknown) {
+      return vi.fn<typeof fetch>().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve(Response.json(body)), ms)
+          })
+      )
+    }
+
+    it('answers normally when Kinorium beats the deadline', async () => {
+      vi.useFakeTimers()
+      const deferred = deferredSearch()
+      const search = searchMoviesDetailed(
+        'dune',
+        'secret',
+        'en',
+        slowFetcher(1_000, movieList),
+        undefined,
+        undefined,
+        deferred
+      )
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      await expect(search).resolves.toMatchObject({ kind: 'ok' })
+      expect(deferred.waitUntil).not.toHaveBeenCalled()
+    })
+
+    it('reports pending at the deadline and finishes in the background', async () => {
+      vi.useFakeTimers()
+      const deferred = deferredSearch()
+      const { searchCache, set } = cacheSpy()
+      const search = searchMoviesDetailed(
+        'dune',
+        'secret',
+        'en',
+        slowFetcher(9_000, movieList),
+        searchCache,
+        undefined,
+        deferred
+      )
+      await vi.advanceTimersByTimeAsync(4_000)
+
+      await expect(search).resolves.toEqual({ kind: 'pending', movies: [] })
+      expect(deferred.waitUntil).toHaveBeenCalledTimes(1)
+      expect(set).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(5_000)
+      await deferred.waitUntil.mock.calls[0]?.[0]
+      expect(set).toHaveBeenCalledWith(
+        'dune',
+        'en',
+        expect.objectContaining({ kind: 'ok' })
+      )
+    })
+
+    it('lets the background fetch outlive the foreground timeout', async () => {
+      vi.useFakeTimers()
+      const deferred = deferredSearch()
+      const search = searchMoviesDetailed(
+        'dune',
+        'secret',
+        'en',
+        slowFetcher(12_000, movieList),
+        undefined,
+        undefined,
+        deferred
+      )
+      await vi.advanceTimersByTimeAsync(4_000)
+      await search
+
+      await vi.advanceTimersByTimeAsync(8_000)
+      await expect(
+        deferred.waitUntil.mock.calls[0]?.[0]
+      ).resolves.toMatchObject({ kind: 'ok' })
+    })
+
+    it('still gives up on a request that never answers', async () => {
+      vi.useFakeTimers()
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const deferred = deferredSearch()
+      const hung = vi.fn<typeof fetch>().mockImplementation(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              reject(new DOMException('aborted', 'AbortError'))
+            })
+          })
+      )
+      const search = searchMoviesDetailed(
+        'dune',
+        'secret',
+        'en',
+        hung,
+        undefined,
+        undefined,
+        deferred
+      )
+      await vi.advanceTimersByTimeAsync(4_000)
+      await search
+      await vi.advanceTimersByTimeAsync(16_000)
+      await deferred.waitUntil.mock.calls.at(-1)?.[0]
+
+      expect(
+        log.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)
+      ).toContainEqual({
+        event: 'kinorium_search_failed',
+        error: 'AbortError',
+        ms: 20_000,
+      })
+    })
+
+    it('waits for the full answer when no deferral is configured', async () => {
+      vi.useFakeTimers()
+      const search = searchMoviesDetailed(
+        'dune',
+        'secret',
+        'en',
+        slowFetcher(6_000, movieList)
+      )
+      await vi.advanceTimersByTimeAsync(6_000)
+
+      await expect(search).resolves.toMatchObject({ kind: 'ok' })
     })
   })
 })

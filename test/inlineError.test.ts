@@ -93,6 +93,33 @@ const expectedResults: ExpectedErrorResult[] = [
     message:
       'Занадто багато запитів за короткий час. Зачекайте трохи й спробуйте знову.',
   },
+  {
+    locale: 'en',
+    kind: 'searching',
+    id: 'searching',
+    title: 'Still searching…',
+    description: 'Kinorium is slow right now. Retry in a few seconds',
+    message:
+      'Kinorium is responding slowly. Your search is still running: type the title again in a few seconds to see the results.',
+  },
+  {
+    locale: 'ru',
+    kind: 'searching',
+    id: 'searching',
+    title: 'Ещё ищем…',
+    description: 'Kinorium отвечает медленно. Повторите через пару секунд',
+    message:
+      'Kinorium отвечает медленно. Поиск ещё идёт: введите название снова через несколько секунд, и результаты появятся.',
+  },
+  {
+    locale: 'uk',
+    kind: 'searching',
+    id: 'searching',
+    title: 'Ще шукаємо…',
+    description: 'Kinorium відповідає повільно. Повторіть за кілька секунд',
+    message:
+      'Kinorium відповідає повільно. Пошук ще триває: введіть назву знову за кілька секунд, і результати з’являться.',
+  },
 ]
 
 describe('inline error result', () => {

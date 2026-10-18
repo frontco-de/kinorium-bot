@@ -23,6 +23,9 @@ interface KinoriumError {
 }
 
 const REQUEST_TIMEOUT_MS = 7_000
+// With a deferred search nobody waits for the fetch, so it may run for as long
+// as the platform keeps the Worker alive after the response (`waitUntil`).
+const BACKGROUND_REQUEST_TIMEOUT_MS = 20_000
 // Searches slower than this are logged so latency from the Worker is visible.
 const SLOW_SEARCH_MS = 3_000
 const KINORIUM_LOCALES: Record<SupportedLocale, 'en' | 'ru' | 'ua'> = {
@@ -50,10 +53,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function fetchWithTimeout(
   fetcher: Fetcher,
   url: string,
+  timeoutMs: number,
   init?: RequestInit
 ) {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   try {
     return await fetcher(url, { ...init, signal: controller.signal })
   } finally {
@@ -190,6 +194,19 @@ type KinoriumSearchResult =
   | { kind: 'ok'; movies: KinoriumMovieWithUrl[] }
   | { kind: 'no_results'; movies: [] }
   | { kind: 'error'; movies: [] }
+  // The deadline passed; the search keeps running and fills the cache.
+  | { kind: 'pending'; movies: [] }
+
+/**
+ * Lets a slow search outlive the caller's patience. Telegram stops accepting an
+ * answer a few seconds after the user types, but Kinorium sometimes needs
+ * longer: past `deadlineMs` the caller gets `pending` while the fetch finishes
+ * in the background and lands in the search cache for the user's retry.
+ */
+export interface DeferredSearch {
+  deadlineMs: number
+  waitUntil(promise: Promise<unknown>): void
+}
 
 export interface KinoriumSearchCache {
   get(
@@ -199,7 +216,7 @@ export interface KinoriumSearchCache {
   set(
     query: string,
     language: SupportedLocale,
-    result: Extract<KinoriumSearchResult, { kind: 'ok' }>
+    result: Extract<KinoriumSearchResult, { kind: 'ok' | 'no_results' }>
   ): void
 }
 
@@ -225,20 +242,14 @@ function isNoResultsError(error: KinoriumError): boolean {
   )
 }
 
-/**
- * Search for movies using the Kinorium API
- * @param query - Search query string
- * @param onApiCall - Called once per upstream request, so cache hits are not
- * counted as searches
- * @returns Promise with result kind + movies
- */
-export async function searchMoviesDetailed(
+async function runSearch(
   query: string,
   apiKey: string,
   language: SupportedLocale,
-  fetcher: Fetcher = fetch,
-  searchCache?: KinoriumSearchCache,
-  onApiCall?: () => void
+  fetcher: Fetcher,
+  searchCache: KinoriumSearchCache | undefined,
+  onApiCall: (() => void) | undefined,
+  timeoutMs: number
 ): Promise<KinoriumSearchResult> {
   let startedAt: number | undefined
   let status: number | undefined
@@ -258,7 +269,7 @@ export async function searchMoviesDetailed(
 
     onApiCall?.()
     startedAt = Date.now()
-    const response = await fetchWithTimeout(fetcher, url)
+    const response = await fetchWithTimeout(fetcher, url, timeoutMs)
     status = response.status
 
     if (!response.ok) {
@@ -279,7 +290,12 @@ export async function searchMoviesDetailed(
     if (data.error !== undefined && data.error !== null) {
       const error = toKinoriumError(data.error)
       if (error && isNoResultsError(error)) {
-        return { kind: 'no_results', movies: [] }
+        const noResults: Extract<KinoriumSearchResult, { kind: 'no_results' }> =
+          { kind: 'no_results', movies: [] }
+        // Remembered briefly so a slow search that found nothing answers "No
+        // results" on the retry instead of starting over.
+        searchCache?.set(query, language, noResults)
+        return noResults
       }
       return { kind: 'error', movies: [] }
     }
@@ -301,6 +317,61 @@ export async function searchMoviesDetailed(
       status,
     })
     return { kind: 'error', movies: [] }
+  }
+}
+
+/**
+ * Search for movies using the Kinorium API
+ * @param query - Search query string
+ * @param onApiCall - Called once per upstream request, so cache hits are not
+ * counted as searches
+ * @param deferred - When set, a search slower than its deadline resolves as
+ * `pending` and completes in the background
+ * @returns Promise with result kind + movies
+ */
+export async function searchMoviesDetailed(
+  query: string,
+  apiKey: string,
+  language: SupportedLocale,
+  fetcher: Fetcher = fetch,
+  searchCache?: KinoriumSearchCache,
+  onApiCall?: () => void,
+  deferred?: DeferredSearch
+): Promise<KinoriumSearchResult> {
+  if (deferred === undefined) {
+    return runSearch(
+      query,
+      apiKey,
+      language,
+      fetcher,
+      searchCache,
+      onApiCall,
+      REQUEST_TIMEOUT_MS
+    )
+  }
+
+  const search = runSearch(
+    query,
+    apiKey,
+    language,
+    fetcher,
+    searchCache,
+    onApiCall,
+    BACKGROUND_REQUEST_TIMEOUT_MS
+  )
+  let deadlineId: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<'deadline'>((resolve) => {
+    deadlineId = setTimeout(() => {
+      resolve('deadline')
+    }, deferred.deadlineMs)
+  })
+  try {
+    const winner = await Promise.race([search, deadline])
+    if (winner !== 'deadline') return winner
+    deferred.waitUntil(search)
+    return { kind: 'pending', movies: [] }
+  } finally {
+    if (deadlineId !== undefined) clearTimeout(deadlineId)
   }
 }
 

@@ -105,7 +105,16 @@ Telegram should report the exact HTTPS webhook URL and a `pending_update_count` 
 - After a search and a selection, confirm both counters moved (`npx wrangler d1 execute kinorium-bot --remote --command "SELECT * FROM usage_stats ORDER BY day DESC LIMIT 4"`).
 - Inspect logs with `npx wrangler tail`; cache failures are non-fatal, and logs must not contain tokens, queries, error messages, user data, or authenticated URLs.
 
-The Worker caches only successful, non-empty searches for five minutes. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
+The Worker caches successful searches for five minutes and searches with no results for one minute; upstream errors are never cached. Cache keys hash the language and trimmed query; API keys and readable searches are excluded. [Cloudflare Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) entries are regional, so a request reaching another data center can miss independently. Cloudflare guarantees functional cache operations for Workers on custom domains, which this deployment uses, so hits are expected rather than incidental — but a request served by another data center still misses.
+
+## Slow Search Fallback
+
+Kinorium sometimes needs 5 to 13 seconds, while Telegram stops accepting an inline answer a few seconds after the user types. The `SLOW_SEARCH_FALLBACK` variable in `wrangler.jsonc` controls how the bot copes:
+
+- `"true"` (default): a search still unanswered after 6 seconds gets a "Still searching…" result (sent with `cache_time: 0`, so the retry reaches the bot). The fetch keeps running for up to 20 seconds through `waitUntil` and fills the search cache, so the user's retry returns instantly.
+- `"false"` (or any other value): the bot waits for Kinorium up to 7 seconds, as before. To turn the feature off, change the value in `wrangler.jsonc`, run `yarn types` (the generated binding type is the literal `"true"`), and merge through a pull request, which deploys. Editing the variable in the Cloudflare dashboard takes effect immediately, but the next deploy overwrites it with the file's value.
+
+A completed answer that arrives after Telegram has closed the query is logged as `inline_query_expired` and does not alert the admin. Searches slower than 3 seconds log `kinorium_search_slow` with the elapsed milliseconds.
 
 Two limits apply. `UPDATE_RATE_LIMITER` drops updates from one sender above 60 per minute before any database access, so a flood cannot spend the daily D1 allowance the bot needs for its own reads; those updates get no answer at all. `INLINE_RATE_LIMITER` limits inline searches to 30 per user per minute and answers with a "slow down" result, protecting the Kinorium quota. The counters are location-local and eventually consistent, so the limit protects the Kinorium quota rather than providing exact accounting.
 

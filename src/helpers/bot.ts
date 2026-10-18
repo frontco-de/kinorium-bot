@@ -5,9 +5,11 @@ import handleLanguage from '@/handlers/language'
 import sendStart from '@/handlers/start'
 import createSendStats from '@/handlers/stats'
 import localize from '@/helpers/i18n'
+import answerInlineQuery, { type InlineResult } from '@/helpers/inlineAnswer'
 import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
 import {
+  type DeferredSearch,
   type KinoriumMovieWithUrl,
   type KinoriumSearchCache,
   searchMoviesDetailed,
@@ -28,7 +30,6 @@ import recordActivity from '@/middlewares/recordActivity'
 import throttleUpdates from '@/middlewares/throttleUpdates'
 import Context from '@/models/Context'
 
-const INLINE_QUERY_CACHE_TIME_SECONDS = 5
 const INLINE_RESULT_LIMIT = 10
 const POSTER_THUMBNAIL_SIZE = '200'
 
@@ -40,15 +41,6 @@ function buildCommandHandlers(env: CloudflareBindings) {
     start: sendStart,
     stats: createSendStats(env.DB, env.ADMIN_ID),
   }
-}
-
-type InlineResult = ReturnType<typeof buildInlineErrorResult>
-
-function answerInlineQuery(ctx: Context, results: InlineResult[]) {
-  return ctx.answerInlineQuery(results, {
-    cache_time: INLINE_QUERY_CACHE_TIME_SECONDS,
-    is_personal: true,
-  })
 }
 
 function buildNoResultsResult(ctx: Context, query: string): InlineResult {
@@ -86,7 +78,8 @@ function registerInlineQueryHandlers(
   apiKey: string,
   rateLimiter: RateLimit,
   searchCache: KinoriumSearchCache,
-  stats: StatsRecorder
+  stats: StatsRecorder,
+  deferredSearch: DeferredSearch | undefined
 ): void {
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
@@ -114,8 +107,19 @@ function registerInlineQueryHandlers(
         searchCache,
         () => {
           stats.record('api_call')
-        }
+        },
+        deferredSearch
       )
+
+      if (searchResult.kind === 'pending') {
+        // Not cached by Telegram: the retry has to reach us to hit our cache.
+        await answerInlineQuery(
+          ctx,
+          [buildInlineErrorResult(ctx.i18n, 'searching')],
+          { cacheTimeSeconds: 0 }
+        )
+        return
+      }
 
       if (searchResult.kind === 'error') {
         await answerInlineQuery(ctx, [buildInlineErrorResult(ctx.i18n, 'api')])
@@ -153,7 +157,8 @@ function registerInlineQueryHandlers(
 export default function createBot(
   env: CloudflareBindings,
   searchCache: KinoriumSearchCache,
-  stats: StatsRecorder
+  stats: StatsRecorder,
+  deferredSearch?: DeferredSearch
 ): Bot<Context> {
   const bot = new Bot<Context>(env.TOKEN, {
     ContextConstructor: Context,
@@ -174,7 +179,8 @@ export default function createBot(
     env.APIKEY,
     env.INLINE_RATE_LIMITER,
     searchCache,
-    stats
+    stats,
+    deferredSearch
   )
   // Telegram only sends this update while inline feedback is enabled in
   // BotFather; see docs/DEPLOY.md.

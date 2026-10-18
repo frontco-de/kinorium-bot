@@ -5,6 +5,10 @@ import logError from '@/helpers/logging'
 import createSearchCache from '@/helpers/searchCache'
 import createStatsRecorder from '@/helpers/stats'
 
+// Kinorium answers in 2s to 13s, and searches up to about 6s still reach the
+// user in time, so only slower ones are handed over to the background.
+const SLOW_SEARCH_DEADLINE_MS = 6_000
+
 const encoder = new TextEncoder()
 
 export async function secretsMatch(actual: string, expected: string) {
@@ -22,6 +26,11 @@ export async function secretsMatch(actual: string, expected: string) {
  */
 function isConfiguredSecret(secret: string | undefined): secret is string {
   return typeof secret === 'string' && secret.length > 0
+}
+
+/** Feature flags are strings in `wrangler.jsonc`; only "true" turns one on. */
+function isEnabled(flag: string | undefined): boolean {
+  return flag === 'true'
 }
 
 function json(data: unknown, status = 200): Response {
@@ -74,7 +83,19 @@ export default {
       const searchCache = createSearchCache(caches.default, ctx, url.origin)
       const stats = createStatsRecorder(env.DB, ctx)
       const handleUpdate = webhookCallback(
-        createBot(env, searchCache, stats),
+        createBot(
+          env,
+          searchCache,
+          stats,
+          isEnabled(env.SLOW_SEARCH_FALLBACK)
+            ? {
+                deadlineMs: SLOW_SEARCH_DEADLINE_MS,
+                waitUntil: (promise) => {
+                  ctx.waitUntil(promise)
+                },
+              }
+            : undefined
+        ),
         'cloudflare-mod',
         {
           onTimeout: 'throw',
