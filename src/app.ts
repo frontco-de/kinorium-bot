@@ -5,9 +5,9 @@ import logError from '@/helpers/logging'
 import createSearchCache from '@/helpers/searchCache'
 import createStatsRecorder from '@/helpers/stats'
 
-// Kinorium answers in 2s to 13s. Telegram stops accepting an inline answer a
-// few seconds after the user types, so ask the user to retry before it does.
-const SLOW_SEARCH_DEADLINE_MS = 4_000
+// Kinorium answers in 2s to 13s, and searches up to about 6s still reach the
+// user in time, so only slower ones are handed over to the background.
+const SLOW_SEARCH_DEADLINE_MS = 6_000
 
 const encoder = new TextEncoder()
 

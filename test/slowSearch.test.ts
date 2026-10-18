@@ -120,7 +120,7 @@ describe('slow Kinorium search', () => {
     await vi.waitFor(() => {
       expect(network.kinoriumCalls()).toBe(1)
     })
-    await vi.advanceTimersByTimeAsync(4_000)
+    await vi.advanceTimersByTimeAsync(6_000)
 
     expect((await firstDelivery).status).toBe(200)
     expect(network.answers[0]).toMatchObject({
@@ -153,7 +153,7 @@ describe('slow Kinorium search', () => {
     await vi.waitFor(() => {
       expect(network.kinoriumCalls()).toBe(1)
     })
-    await vi.advanceTimersByTimeAsync(4_000)
+    await vi.advanceTimersByTimeAsync(6_000)
     await firstDelivery
 
     network.releaseKinorium({ error: { code: 404, message: 'Not found' } })
@@ -179,7 +179,7 @@ describe('slow Kinorium search', () => {
     await vi.waitFor(() => {
       expect(network.kinoriumCalls()).toBe(1)
     })
-    await vi.advanceTimersByTimeAsync(4_500)
+    await vi.advanceTimersByTimeAsync(6_500)
     expect(network.answers).toEqual([])
 
     network.releaseKinorium(MOVIE_RESPONSE)

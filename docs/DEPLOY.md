@@ -111,7 +111,7 @@ The Worker caches successful searches for five minutes and searches with no resu
 
 Kinorium sometimes needs 5 to 13 seconds, while Telegram stops accepting an inline answer a few seconds after the user types. The `SLOW_SEARCH_FALLBACK` variable in `wrangler.jsonc` controls how the bot copes:
 
-- `"true"` (default): a search still unanswered after 4 seconds gets a "Still searching…" result (sent with `cache_time: 0`, so the retry reaches the bot). The fetch keeps running for up to 20 seconds through `waitUntil` and fills the search cache, so the user's retry returns instantly.
+- `"true"` (default): a search still unanswered after 6 seconds gets a "Still searching…" result (sent with `cache_time: 0`, so the retry reaches the bot). The fetch keeps running for up to 20 seconds through `waitUntil` and fills the search cache, so the user's retry returns instantly.
 - `"false"` (or any other value): the bot waits for Kinorium up to 7 seconds, as before. To turn the feature off, change the value in `wrangler.jsonc`, run `yarn types` (the generated binding type is the literal `"true"`), and merge through a pull request, which deploys. Editing the variable in the Cloudflare dashboard takes effect immediately, but the next deploy overwrites it with the file's value.
 
 A completed answer that arrives after Telegram has closed the query is logged as `inline_query_expired` and does not alert the admin. Searches slower than 3 seconds log `kinorium_search_slow` with the elapsed milliseconds.
