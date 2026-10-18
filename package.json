@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "grammy": "^1.45.1",
-    "js-yaml": "^5.3.0"
+    "js-yaml": "^5.4.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.3",
