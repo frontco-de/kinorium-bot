@@ -425,10 +425,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@grammyjs/types@npm:4.0.0":
-  version: 4.0.0
-  resolution: "@grammyjs/types@npm:4.0.0"
-  checksum: 10c0/00fa7e9c5e4552de5671a699386099e15a1ca757f9a4f5fcd9280b954d66b234a1256263abdff96cb85fd1bcd9c89abb60b2803910b1f771f1f2ef30c3986b46
+"@grammyjs/types@npm:5.0.0":
+  version: 5.0.0
+  resolution: "@grammyjs/types@npm:5.0.0"
+  checksum: 10c0/235f473e9e2d2e1b0d41fa80ec125af79c6b7f27c2e19a0d52ba43c3231518d1fc1fc4f5200918356ba6aac695d36da030354db6fe8f4f9ef0cc7715125cde92
   languageName: node
   linkType: hard
 
@@ -2376,15 +2376,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"grammy@npm:^1.45.1":
-  version: 1.45.1
-  resolution: "grammy@npm:1.45.1"
+"grammy@npm:^1.46.0":
+  version: 1.46.0
+  resolution: "grammy@npm:1.46.0"
   dependencies:
-    "@grammyjs/types": "npm:4.0.0"
+    "@grammyjs/types": "npm:5.0.0"
     abort-controller: "npm:^3.0.0"
     debug: "npm:^4.4.3"
     node-fetch: "npm:^2.7.0"
-  checksum: 10c0/d0fc8e12ba249fba995ee1c30484ff2bf796e71782f194619df87a75b41f5db9172ff4ef1b04824191ecfa518d13e86386600b6df30d66798777143e2b4a05ed
+  checksum: 10c0/38d78fa9cab044bce8a8093c276b908f01515c7cbb1602995242ec5d2e5b2cbd2ce28b01b58660e8570e45c40288ed913cc5080e537033a6b321b986717d120b
   languageName: node
   linkType: hard
 
@@ -2510,7 +2510,7 @@ __metadata:
     eslint-plugin-import-x: "npm:^4.17.1"
     eslint-plugin-n: "npm:^18.3.0"
     globals: "npm:^17.11.0"
-    grammy: "npm:^1.45.1"
+    grammy: "npm:^1.46.0"
     js-yaml: "npm:^5.4.1"
     prettier: "npm:^3.9.6"
     typescript: "npm:^5.9.3"
