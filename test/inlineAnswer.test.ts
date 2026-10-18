@@ -23,7 +23,7 @@ describe('answerInlineQuery', () => {
   it('passes the results to Telegram with a short personal cache', async () => {
     const ctx = { answerInlineQuery: vi.fn().mockResolvedValue(true) }
 
-    await answerInlineQuery(ctx, [])
+    await expect(answerInlineQuery(ctx, [])).resolves.toBe(true)
 
     expect(ctx.answerInlineQuery).toHaveBeenCalledWith([], {
       cache_time: 5,
@@ -51,7 +51,9 @@ describe('answerInlineQuery', () => {
       )
     )
 
-    await expect(answerInlineQuery(ctx, [])).resolves.toBeUndefined()
+    await expect(answerInlineQuery(ctx, [], { waitedMs: 6_400 })).resolves.toBe(
+      false
+    )
 
     const line = String(log.mock.calls[0]?.[0])
     expect(JSON.parse(line)).toEqual({
@@ -59,6 +61,7 @@ describe('answerInlineQuery', () => {
       error: 'GrammyError',
       method: 'answerInlineQuery',
       code: 400,
+      ms: 6_400,
     })
     expect(line).not.toContain('too old')
   })

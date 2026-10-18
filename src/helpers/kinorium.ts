@@ -242,6 +242,28 @@ function isNoResultsError(error: KinoriumError): boolean {
   )
 }
 
+// Telegram sends an inline query for every input event, including cursor moves
+// and select-all with unchanged text, so identical searches overlap. They share
+// one upstream request per Worker instance; the map holds nothing once it ends.
+const searchesInFlight = new Map<string, Promise<KinoriumSearchResult>>()
+
+function shareInFlight(
+  query: string,
+  language: SupportedLocale,
+  timeoutMs: number,
+  start: () => Promise<KinoriumSearchResult>
+): Promise<KinoriumSearchResult> {
+  const key = `${timeoutMs}\n${language}\n${query.trim()}`
+  const running = searchesInFlight.get(key)
+  if (running !== undefined) return running
+
+  const search = start().finally(() => {
+    searchesInFlight.delete(key)
+  })
+  searchesInFlight.set(key, search)
+  return search
+}
+
 async function runSearch(
   query: string,
   apiKey: string,
@@ -338,27 +360,21 @@ export async function searchMoviesDetailed(
   onApiCall?: () => void,
   deferred?: DeferredSearch
 ): Promise<KinoriumSearchResult> {
-  if (deferred === undefined) {
-    return runSearch(
+  const timeoutMs =
+    deferred === undefined ? REQUEST_TIMEOUT_MS : BACKGROUND_REQUEST_TIMEOUT_MS
+  const search = shareInFlight(query, language, timeoutMs, () =>
+    runSearch(
       query,
       apiKey,
       language,
       fetcher,
       searchCache,
       onApiCall,
-      REQUEST_TIMEOUT_MS
+      timeoutMs
     )
-  }
-
-  const search = runSearch(
-    query,
-    apiKey,
-    language,
-    fetcher,
-    searchCache,
-    onApiCall,
-    BACKGROUND_REQUEST_TIMEOUT_MS
   )
+  if (deferred === undefined) return search
+
   let deadlineId: ReturnType<typeof setTimeout> | undefined
   const deadline = new Promise<'deadline'>((resolve) => {
     deadlineId = setTimeout(() => {

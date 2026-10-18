@@ -110,6 +110,7 @@ describe('slow Kinorium search', () => {
   })
 
   it('answers "still searching", then serves the finished search from cache', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const network = stubNetwork()
     const executionContext = createExecutionContext()
     const firstDelivery = worker.fetch(
@@ -126,6 +127,13 @@ describe('slow Kinorium search', () => {
     expect(network.answers[0]).toMatchObject({
       results: [{ id: 'searching' }],
       cache_time: 0,
+    })
+
+    expect(
+      log.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)
+    ).toContainEqual({
+      event: 'inline_search_deferred',
+      ms: expect.any(Number) as number,
     })
 
     network.releaseKinorium(MOVIE_RESPONSE)
@@ -189,5 +197,40 @@ describe('slow Kinorium search', () => {
     expect(network.answers[0]?.results[0]?.id).toBe(
       buildInlineMovieResultId('query-3', 321)
     )
+  })
+
+  it('starts one Kinorium request for the same query sent twice at once', async () => {
+    const network = stubNetwork()
+    const firstContext = createExecutionContext()
+    const secondContext = createExecutionContext()
+    const bindings = { ...env, SLOW_SEARCH_FALLBACK: 'true' as const }
+
+    const first = worker.fetch(
+      inlineQueryRequest('terminator', 6),
+      bindings,
+      firstContext
+    )
+    await vi.waitFor(() => {
+      expect(network.kinoriumCalls()).toBe(1)
+    })
+    const second = worker.fetch(
+      inlineQueryRequest('terminator', 7),
+      bindings,
+      secondContext
+    )
+    await vi.advanceTimersByTimeAsync(5_000)
+    await Promise.all([first, second])
+
+    expect(network.kinoriumCalls()).toBe(1)
+    expect(network.answers.map((answer) => answer.results[0]?.id)).toEqual([
+      'searching',
+      'searching',
+    ])
+
+    network.releaseKinorium(MOVIE_RESPONSE)
+    await Promise.all([
+      waitOnExecutionContext(firstContext),
+      waitOnExecutionContext(secondContext),
+    ])
   })
 })

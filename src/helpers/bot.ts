@@ -81,6 +81,18 @@ function registerInlineQueryHandlers(
   stats: StatsRecorder,
   deferredSearch: DeferredSearch | undefined
 ): void {
+  // Handlers are built per request, so this is when the update arrived. It is
+  // logged with a late answer to show how much of Telegram's window was used.
+  const receivedAt = Date.now()
+  const answer = (
+    ctx: Context,
+    results: InlineResult[],
+    options: { cacheTimeSeconds?: number } = {}
+  ) =>
+    answerInlineQuery(ctx, results, {
+      ...options,
+      waitedMs: Date.now() - receivedAt,
+    })
   // When user types: @YourBot hello
   bot.inlineQuery(/.*/, async (ctx) => {
     try {
@@ -88,14 +100,12 @@ function registerInlineQueryHandlers(
 
       // Empty queries never reach Kinorium.
       if (searchText.length === 0) {
-        await answerInlineQuery(ctx, [])
+        await answer(ctx, [])
         return
       }
 
       if (!(await isWithinRateLimit(rateLimiter, 'inline', ctx.from?.id))) {
-        await answerInlineQuery(ctx, [
-          buildInlineErrorResult(ctx.i18n, 'rate_limit'),
-        ])
+        await answer(ctx, [buildInlineErrorResult(ctx.i18n, 'rate_limit')])
         return
       }
 
@@ -113,16 +123,21 @@ function registerInlineQueryHandlers(
 
       if (searchResult.kind === 'pending') {
         // Not cached by Telegram: the retry has to reach us to hit our cache.
-        await answerInlineQuery(
+        const delivered = await answer(
           ctx,
           [buildInlineErrorResult(ctx.i18n, 'searching')],
           { cacheTimeSeconds: 0 }
         )
+        if (delivered) {
+          logError('inline_search_deferred', undefined, {
+            ms: Date.now() - receivedAt,
+          })
+        }
         return
       }
 
       if (searchResult.kind === 'error') {
-        await answerInlineQuery(ctx, [buildInlineErrorResult(ctx.i18n, 'api')])
+        await answer(ctx, [buildInlineErrorResult(ctx.i18n, 'api')])
         return
       }
 
@@ -141,15 +156,13 @@ function registerInlineQueryHandlers(
           )
         )
 
-      await answerInlineQuery(
+      await answer(
         ctx,
         results.length > 0 ? results : [buildNoResultsResult(ctx, searchText)]
       )
     } catch (error) {
       logError('inline_query_failed', error)
-      await answerInlineQuery(ctx, [
-        buildInlineErrorResult(ctx.i18n, 'unexpected'),
-      ])
+      await answer(ctx, [buildInlineErrorResult(ctx.i18n, 'unexpected')])
     }
   })
 }
