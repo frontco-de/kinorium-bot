@@ -4,7 +4,7 @@ import {
   SELF,
   waitOnExecutionContext,
 } from 'cloudflare:test'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import worker, { secretsMatch } from '@/app'
 
 type IncomingRequest = Parameters<typeof worker.fetch>[0]
@@ -22,6 +22,31 @@ function webhookRequest(secret?: string): IncomingRequest {
     body: JSON.stringify({ update_id: 0 }),
   })
 }
+
+function startCommandRequest(): IncomingRequest {
+  return new Request('https://example.com/webhook', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Telegram-Bot-Api-Secret-Token': env.WEBHOOK_SECRET,
+    },
+    body: JSON.stringify({
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: 0,
+        chat: { id: 1, type: 'private' },
+        from: { id: 1, is_bot: false, first_name: 'Test' },
+        text: '/start',
+        entities: [{ type: 'bot_command', offset: 0, length: 6 }],
+      },
+    }),
+  })
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('Worker HTTP interface', () => {
   it('compares webhook secrets without exposing their length', async () => {
@@ -95,5 +120,34 @@ describe('Worker HTTP interface', () => {
     })
 
     expect(response.status).toBe(200)
+  })
+
+  it('answers 200 and logs the real error when a handler fails', async () => {
+    const logs = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const executionContext = createExecutionContext()
+    const response = await worker.fetch(
+      startCommandRequest(),
+      // No database makes the first middleware that touches it throw.
+      {
+        ...env,
+        ADMIN_ID: undefined as unknown as string,
+        DB: undefined as unknown as D1Database,
+      },
+      executionContext
+    )
+    await waitOnExecutionContext(executionContext)
+
+    // A 500 would make Telegram redeliver the failing update indefinitely.
+    expect(response.status).toBe(200)
+    const events = logs.mock.calls.map(
+      ([line]) => JSON.parse(String(line)) as unknown
+    )
+    expect(events).toEqual([
+      {
+        event: 'telegram_update_failed',
+        error: 'TypeError',
+        update: 'message',
+      },
+    ])
   })
 })
