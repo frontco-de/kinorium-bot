@@ -6,6 +6,10 @@ import {
 } from '@/helpers/kinorium'
 
 describe('Kinorium search', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('maps movies to public Kinorium URLs', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       Response.json({
@@ -182,6 +186,40 @@ describe('Kinorium search', () => {
       searchMoviesDetailed('Dune', 'secret', 'en', fetcher, searchCache)
     ).resolves.toEqual({ kind: 'error', movies: [] })
     expect(setCache).not.toHaveBeenCalled()
+  })
+
+  it('treats a null body, which Kinorium sends for an unknown title, as no results', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(Response.json(null)))
+    const setCache = vi.fn<KinoriumSearchCache['set']>()
+    const searchCache: KinoriumSearchCache = {
+      get: vi.fn().mockResolvedValue(undefined),
+      set: setCache,
+    }
+
+    await expect(
+      searchMoviesDetailed('58392017', 'secret', 'en', fetcher, searchCache)
+    ).resolves.toEqual({ kind: 'no_results', movies: [] })
+    expect(setCache).toHaveBeenCalledWith('58392017', 'en', {
+      kind: 'no_results',
+      movies: [],
+    })
+  })
+
+  it.each([
+    ['a string', 'oops'],
+    ['a number', 7],
+    ['a list', []],
+  ])('still reports %s body as an error', async (_label, body) => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(Response.json(body)))
+
+    await expect(
+      searchMoviesDetailed('Dune', 'secret', 'en', fetcher)
+    ).resolves.toEqual({ kind: 'error', movies: [] })
   })
 
   it('returns an error for malformed data', async () => {
