@@ -282,6 +282,24 @@ function shareInFlight(
   return shared.promise
 }
 
+/**
+ * The outcome of a search that found nothing. It is remembered briefly so a slow
+ * search that found nothing answers "No results" on the retry instead of
+ * starting over.
+ */
+function remember(
+  query: string,
+  language: SupportedLocale,
+  searchCache: KinoriumSearchCache | undefined
+): Extract<KinoriumSearchResult, { kind: 'no_results' }> {
+  const noResults = { kind: 'no_results', movies: [] } satisfies Extract<
+    KinoriumSearchResult,
+    { kind: 'no_results' }
+  >
+  searchCache?.set(query, language, noResults)
+  return noResults
+}
+
 async function runSearch(
   query: string,
   apiKey: string,
@@ -323,6 +341,9 @@ async function runSearch(
     if (elapsed > SLOW_SEARCH_MS) {
       logError('kinorium_search_slow', undefined, { ms: elapsed })
     }
+    // For a title it does not know, Kinorium answers 200 with the JSON value
+    // `null` instead of an error object.
+    if (data === null) return remember(query, language, searchCache)
     if (!isRecord(data)) {
       throw new Error('Kinorium returned an invalid response')
     }
@@ -330,12 +351,7 @@ async function runSearch(
     if (data.error !== undefined && data.error !== null) {
       const error = toKinoriumError(data.error)
       if (error && isNoResultsError(error)) {
-        const noResults: Extract<KinoriumSearchResult, { kind: 'no_results' }> =
-          { kind: 'no_results', movies: [] }
-        // Remembered briefly so a slow search that found nothing answers "No
-        // results" on the retry instead of starting over.
-        searchCache?.set(query, language, noResults)
-        return noResults
+        return remember(query, language, searchCache)
       }
       return { kind: 'error', movies: [] }
     }
