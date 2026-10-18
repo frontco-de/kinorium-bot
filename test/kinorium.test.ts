@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   type KinoriumSearchCache,
   searchMoviesDetailed,
@@ -265,5 +265,90 @@ describe('Kinorium search', () => {
       undefined,
       undefined,
     ])
+  })
+
+  describe('timing diagnostics', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    function spyOnLog() {
+      return vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    }
+
+    function loggedEvents(log: ReturnType<typeof spyOnLog>) {
+      return log.mock.calls.map(([line]) => JSON.parse(String(line)) as unknown)
+    }
+
+    function respondAfter(ms: number, response: () => Response) {
+      return vi.fn<typeof fetch>().mockImplementation(() => {
+        vi.advanceTimersByTime(ms)
+        return Promise.resolve(response())
+      })
+    }
+
+    it('logs only the duration of a slow successful search', async () => {
+      vi.useFakeTimers()
+      const log = spyOnLog()
+      const fetcher = respondAfter(3_500, () =>
+        Response.json({ movie_list: [] })
+      )
+
+      await searchMoviesDetailed('private query', 'secret', 'en', fetcher)
+
+      expect(loggedEvents(log)).toEqual([
+        { event: 'kinorium_search_slow', ms: 3_500 },
+      ])
+      expect(JSON.stringify(log.mock.calls)).not.toContain('private query')
+    })
+
+    it('stays quiet for a fast successful search', async () => {
+      vi.useFakeTimers()
+      const log = spyOnLog()
+      const fetcher = respondAfter(200, () => Response.json({ movie_list: [] }))
+
+      await searchMoviesDetailed('dune', 'secret', 'en', fetcher)
+
+      expect(log).not.toHaveBeenCalled()
+    })
+
+    it('logs the duration and status of an HTTP failure', async () => {
+      vi.useFakeTimers()
+      const log = spyOnLog()
+      const fetcher = respondAfter(900, () => new Response('', { status: 429 }))
+
+      await searchMoviesDetailed('dune', 'secret', 'en', fetcher)
+
+      expect(loggedEvents(log)).toEqual([
+        {
+          event: 'kinorium_search_failed',
+          error: 'Error',
+          ms: 900,
+          status: 429,
+        },
+      ])
+    })
+
+    it('logs the duration of a request that never answered', async () => {
+      vi.useFakeTimers()
+      const log = spyOnLog()
+      const fetcher = vi.fn<typeof fetch>().mockImplementation(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              reject(new DOMException('aborted', 'AbortError'))
+            })
+          })
+      )
+
+      const search = searchMoviesDetailed('dune', 'secret', 'en', fetcher)
+      await vi.advanceTimersByTimeAsync(7_000)
+      await search
+
+      expect(loggedEvents(log)).toEqual([
+        { event: 'kinorium_search_failed', error: 'AbortError', ms: 7_000 },
+      ])
+    })
   })
 })

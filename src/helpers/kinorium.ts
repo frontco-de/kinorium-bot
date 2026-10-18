@@ -23,6 +23,8 @@ interface KinoriumError {
 }
 
 const REQUEST_TIMEOUT_MS = 7_000
+// Searches slower than this are logged so latency from the Worker is visible.
+const SLOW_SEARCH_MS = 3_000
 const KINORIUM_LOCALES: Record<SupportedLocale, 'en' | 'ru' | 'ua'> = {
   en: 'en',
   ru: 'ru',
@@ -238,6 +240,8 @@ export async function searchMoviesDetailed(
   searchCache?: KinoriumSearchCache,
   onApiCall?: () => void
 ): Promise<KinoriumSearchResult> {
+  let startedAt: number | undefined
+  let status: number | undefined
   try {
     const cachedResult = await searchCache?.get(query, language)
     if (cachedResult !== undefined) return cachedResult
@@ -253,13 +257,21 @@ export async function searchMoviesDetailed(
     const url = `https://db.kinorium.com/search/?apikey=${encodedApiKey}&q=${encodedQuery}&lng=${kinoriumLocale}`
 
     onApiCall?.()
+    startedAt = Date.now()
     const response = await fetchWithTimeout(fetcher, url)
+    status = response.status
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data: unknown = await response.json()
+    // Measured after the body: the abort timer stops once headers arrive, so a
+    // stalled body would otherwise look like a fast search.
+    const elapsed = Date.now() - startedAt
+    if (elapsed > SLOW_SEARCH_MS) {
+      logError('kinorium_search_slow', undefined, { ms: elapsed })
+    }
     if (!isRecord(data)) {
       throw new Error('Kinorium returned an invalid response')
     }
@@ -284,7 +296,10 @@ export async function searchMoviesDetailed(
     }
     return searchResult
   } catch (error) {
-    logError('kinorium_search_failed', error)
+    logError('kinorium_search_failed', error, {
+      ms: startedAt === undefined ? undefined : Date.now() - startedAt,
+      status,
+    })
     return { kind: 'error', movies: [] }
   }
 }
