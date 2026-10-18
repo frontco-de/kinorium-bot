@@ -18,6 +18,11 @@
     },
   ],
   "vars": {
+    // Feature flag. "true": an inline search that Kinorium has not answered
+    // after ~4s gets a "still searching" result while the fetch finishes in the
+    // background and fills the cache, so the user's retry is instant. Set to
+    // "false" and deploy to restore plain waiting.
+    "SLOW_SEARCH_FALLBACK": "true",
     // Public `getMe` metadata.
     "BOT_INFO": {
       "id": 1848460309,

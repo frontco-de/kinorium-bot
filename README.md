@@ -43,6 +43,8 @@ yarn dev
 
 The local health endpoint is `http://localhost:8787/health`. Telegram cannot send updates to localhost without a public tunnel, so automated tests are the default local verification path.
 
+Feature flags live in `wrangler.jsonc` under `vars`. `SLOW_SEARCH_FALLBACK` (`"true"`/`"false"`) answers a slow inline search with a "still searching" result and finishes it in the background; see [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Using the Bot
 
 In any Telegram chat, type the bot username followed by a movie or series title. Use [@kinorium_bot](https://t.me/kinorium_bot) for the hosted instance, or your own username when self-hosting:
