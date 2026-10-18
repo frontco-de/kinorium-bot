@@ -245,7 +245,15 @@ function isNoResultsError(error: KinoriumError): boolean {
 // Telegram sends an inline query for every input event, including cursor moves
 // and select-all with unchanged text, so identical searches overlap. They share
 // one upstream request per Worker instance; the map holds nothing once it ends.
-const searchesInFlight = new Map<string, Promise<KinoriumSearchResult>>()
+interface SharedSearch {
+  promise: Promise<KinoriumSearchResult>
+  startedAt: number
+}
+const searchesInFlight = new Map<string, SharedSearch>()
+// A request that outlives its owner may never settle. Past the longest fetch
+// plus this margin the entry is distrusted, so one dead promise cannot pin a
+// query for the life of the instance.
+const STALE_SEARCH_GRACE_MS = 5_000
 
 function shareInFlight(
   query: string,
@@ -254,14 +262,24 @@ function shareInFlight(
   start: () => Promise<KinoriumSearchResult>
 ): Promise<KinoriumSearchResult> {
   const key = `${timeoutMs}\n${language}\n${query.trim()}`
+  const now = Date.now()
   const running = searchesInFlight.get(key)
-  if (running !== undefined) return running
+  if (
+    running !== undefined &&
+    now - running.startedAt <
+      BACKGROUND_REQUEST_TIMEOUT_MS + STALE_SEARCH_GRACE_MS
+  ) {
+    return running.promise
+  }
 
-  const search = start().finally(() => {
-    searchesInFlight.delete(key)
-  })
-  searchesInFlight.set(key, search)
-  return search
+  const shared: SharedSearch = {
+    promise: start().finally(() => {
+      if (searchesInFlight.get(key) === shared) searchesInFlight.delete(key)
+    }),
+    startedAt: now,
+  }
+  searchesInFlight.set(key, shared)
+  return shared.promise
 }
 
 async function runSearch(

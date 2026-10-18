@@ -597,6 +597,24 @@ describe('Kinorium search', () => {
       expect(fetcher).toHaveBeenCalledTimes(2)
     })
 
+    it('stops sharing a request that never settles', async () => {
+      vi.useFakeTimers()
+      const hangsForever = vi
+        .fn<typeof fetch>()
+        // Ignores the abort signal, like a request owned by a request that ended.
+        .mockImplementation(() => new Promise<Response>(() => undefined))
+      const fresh = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ movie_list: [] }))
+
+      void searchMoviesDetailed('terminator', 'k', 'en', hangsForever)
+      await vi.advanceTimersByTimeAsync(26_000)
+      const retry = await searchMoviesDetailed('terminator', 'k', 'en', fresh)
+
+      expect(fresh).toHaveBeenCalledTimes(1)
+      expect(retry).toMatchObject({ kind: 'ok' })
+    })
+
     it('does not keep a failed search around for the next one', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => undefined)
       const fetcher = vi
