@@ -5,9 +5,10 @@ import logError from '@/helpers/logging'
 import createSearchCache from '@/helpers/searchCache'
 import createStatsRecorder from '@/helpers/stats'
 
-// Kinorium answers in 2s to 13s, and searches up to about 6s still reach the
-// user in time, so only slower ones are handed over to the background.
-const SLOW_SEARCH_DEADLINE_MS = 6_000
+// Kinorium answers in 2s to 13s. In production an answer sent about 6s after
+// the query was rejected as too old, while answers after 4.9s to 5.9s searches
+// were accepted, so anything slower is handed to the background with margin.
+const SLOW_SEARCH_DEADLINE_MS = 5_000
 
 const encoder = new TextEncoder()
 
