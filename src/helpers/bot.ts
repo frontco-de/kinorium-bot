@@ -4,7 +4,6 @@ import sendHelp from '@/handlers/help'
 import handleLanguage from '@/handlers/language'
 import sendStart from '@/handlers/start'
 import createSendStats from '@/handlers/stats'
-import { type AdminAlerter } from '@/helpers/alerts'
 import localize from '@/helpers/i18n'
 import buildInlineErrorResult from '@/helpers/inlineError'
 import buildInlineMovieResultId from '@/helpers/inlineResult'
@@ -154,8 +153,7 @@ function registerInlineQueryHandlers(
 export default function createBot(
   env: CloudflareBindings,
   searchCache: KinoriumSearchCache,
-  stats: StatsRecorder,
-  alerts: AdminAlerter
+  stats: StatsRecorder
 ): Bot<Context> {
   const bot = new Bot<Context>(env.TOKEN, {
     ContextConstructor: Context,
@@ -186,12 +184,6 @@ export default function createBot(
   for (const [command, handler] of Object.entries(commandHandlers)) {
     bot.command(command, handler)
   }
-  bot.catch((error) => {
-    // Swallowed on purpose: rethrowing makes the webhook answer 500, and
-    // Telegram then redelivers the same update ahead of every later one.
-    logError('telegram_update_failed', error.error)
-    alerts.alert('telegram_update_failed', error.error)
-  })
 
   return bot
 }

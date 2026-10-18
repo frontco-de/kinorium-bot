@@ -18,9 +18,9 @@ The application is a strict TypeScript Telegram bot built with grammY:
 
 ## Error Handling and Logging
 
-`bot.catch` logs and swallows handler failures so the webhook still answers `200`. Rethrowing would make Telegram redeliver the same update ahead of every later one, turning one deterministic bug into a stalled update queue. Only unexpected failures outside the bot, and grammY's own request timeout, produce a `500`.
+`src/app.ts` logs and swallows handler failures (grammY's `BotError`) so the webhook still answers `200`. grammY's webhook adapter calls `bot.handleUpdate`, which bypasses `bot.catch`, so the handler lives there. Rethrowing would make Telegram redeliver the same update ahead of every later one, turning one deterministic bug into a stalled update queue. Only unexpected failures outside the bot, and grammY's own request timeout, produce a `500`.
 
-Log through `src/helpers/logging.ts`. It records the event name and the error's constructor name only, because error messages can carry Telegram updates, search queries, SQL, or authenticated URLs.
+Log through `src/helpers/logging.ts`. It records the event name and the error's constructor name, plus fixed-vocabulary fields (the update type key, and a `GrammyError`'s Telegram method and status code). It never records messages or descriptions, because error messages can carry Telegram updates, search queries, SQL, or authenticated URLs.
 
 ## Key Files
 

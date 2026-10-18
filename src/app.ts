@@ -1,5 +1,4 @@
-import { Api } from 'grammy/web'
-import { webhookCallback } from 'grammy/web'
+import { Api, BotError, type Context, webhookCallback } from 'grammy/web'
 import createAdminAlerter from '@/helpers/alerts'
 import createBot from '@/helpers/bot'
 import logError from '@/helpers/logging'
@@ -36,6 +35,11 @@ function json(data: unknown, status = 200): Response {
   })
 }
 
+/** The update's type key, e.g. `inline_query`; never its content. */
+function updateKind(update: Record<string, unknown>): string | undefined {
+  return Object.keys(update).find((key) => key !== 'update_id')
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url)
@@ -70,7 +74,7 @@ export default {
       const searchCache = createSearchCache(caches.default, ctx, url.origin)
       const stats = createStatsRecorder(env.DB, ctx)
       const handleUpdate = webhookCallback(
-        createBot(env, searchCache, stats, alerts),
+        createBot(env, searchCache, stats),
         'cloudflare-mod',
         {
           onTimeout: 'throw',
@@ -82,6 +86,17 @@ export default {
       )
       return await handleUpdate(request)
     } catch (error) {
+      if (error instanceof BotError) {
+        const { ctx: botCtx, error: cause } = error as BotError<Context>
+        // grammY's webhook adapter calls `bot.handleUpdate`, which bypasses
+        // `bot.catch`. Answer 200 anyway: a 500 makes Telegram redeliver the
+        // same update ahead of every later one.
+        logError('telegram_update_failed', cause, {
+          update: updateKind({ ...botCtx.update }),
+        })
+        alerts.alert('telegram_update_failed', cause)
+        return json({ ok: true })
+      }
       logError('webhook_request_failed', error)
       alerts.alert('webhook_request_failed', error)
       return json({ error: 'Internal server error' }, 500)
