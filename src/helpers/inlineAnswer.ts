@@ -8,6 +8,8 @@ const INLINE_QUERY_CACHE_TIME_SECONDS = 5
 interface AnswerOptions {
   /** Seconds Telegram may reuse this answer; `0` makes the next keystroke or retry reach the bot. */
   cacheTimeSeconds?: number
+  /** Milliseconds since the Worker received the update; logged when the answer is late. */
+  waitedMs?: number
 }
 
 export type InlineResult = ReturnType<typeof buildInlineErrorResult>
@@ -26,22 +28,28 @@ function isExpiredQuery(error: unknown): boolean {
 }
 
 /**
- * Answers an inline query. An answer that arrives after Telegram closed the
- * query cannot be delivered and is not a bug, so it is logged without raising
- * an admin alert; every other failure still propagates.
+ * Answers an inline query and reports whether Telegram accepted it. An answer
+ * that arrives after Telegram closed the query cannot be delivered and is not a
+ * bug, so it is logged without raising an admin alert; every other failure
+ * still propagates.
  */
 export default async function answerInlineQuery(
   ctx: Pick<Context, 'answerInlineQuery'>,
   results: InlineResult[],
-  { cacheTimeSeconds = INLINE_QUERY_CACHE_TIME_SECONDS }: AnswerOptions = {}
-): Promise<void> {
+  {
+    cacheTimeSeconds = INLINE_QUERY_CACHE_TIME_SECONDS,
+    waitedMs,
+  }: AnswerOptions = {}
+): Promise<boolean> {
   try {
     await ctx.answerInlineQuery(results, {
       cache_time: cacheTimeSeconds,
       is_personal: true,
     })
+    return true
   } catch (error) {
     if (!isExpiredQuery(error)) throw error
-    logError('inline_query_expired', error)
+    logError('inline_query_expired', error, { ms: waitedMs })
+    return false
   }
 }

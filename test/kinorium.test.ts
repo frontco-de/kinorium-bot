@@ -522,4 +522,112 @@ describe('Kinorium search', () => {
       await expect(search).resolves.toMatchObject({ kind: 'ok' })
     })
   })
+
+  describe('identical searches in flight', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function gatedFetcher() {
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => {
+        await gate
+        return Response.json({
+          movie_list: [{ id: 5, mixtype: 'movie', name: 'Terminator' }],
+        })
+      })
+      return { fetcher, release }
+    }
+
+    it('shares one Kinorium request between identical searches', async () => {
+      const { fetcher, release } = gatedFetcher()
+      const onApiCall = vi.fn()
+
+      const first = searchMoviesDetailed(
+        'terminator',
+        'k',
+        'en',
+        fetcher,
+        undefined,
+        onApiCall
+      )
+      const second = searchMoviesDetailed(
+        '  terminator ',
+        'k',
+        'en',
+        fetcher,
+        undefined,
+        onApiCall
+      )
+      release()
+
+      const [firstResult, secondResult] = await Promise.all([first, second])
+      expect(fetcher).toHaveBeenCalledTimes(1)
+      expect(onApiCall).toHaveBeenCalledTimes(1)
+      expect(secondResult).toEqual(firstResult)
+    })
+
+    it('keeps searches in other languages or for other text apart', async () => {
+      const { fetcher, release } = gatedFetcher()
+
+      const searches = [
+        searchMoviesDetailed('terminator', 'k', 'en', fetcher),
+        searchMoviesDetailed('terminator', 'k', 'ru', fetcher),
+        searchMoviesDetailed('terminal', 'k', 'en', fetcher),
+      ]
+      release()
+      await Promise.all(searches)
+
+      expect(fetcher).toHaveBeenCalledTimes(3)
+    })
+
+    it('searches again once the earlier request has finished', async () => {
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockImplementation(() =>
+          Promise.resolve(Response.json({ movie_list: [] }))
+        )
+
+      await searchMoviesDetailed('terminator', 'k', 'en', fetcher)
+      await searchMoviesDetailed('terminator', 'k', 'en', fetcher)
+
+      expect(fetcher).toHaveBeenCalledTimes(2)
+    })
+
+    it('stops sharing a request that never settles', async () => {
+      vi.useFakeTimers()
+      const hangsForever = vi
+        .fn<typeof fetch>()
+        // Ignores the abort signal, like a request owned by a request that ended.
+        .mockImplementation(() => new Promise<Response>(() => undefined))
+      const fresh = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ movie_list: [] }))
+
+      void searchMoviesDetailed('terminator', 'k', 'en', hangsForever)
+      await vi.advanceTimersByTimeAsync(26_000)
+      const retry = await searchMoviesDetailed('terminator', 'k', 'en', fresh)
+
+      expect(fresh).toHaveBeenCalledTimes(1)
+      expect(retry).toMatchObject({ kind: 'ok' })
+    })
+
+    it('does not keep a failed search around for the next one', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockRejectedValueOnce(new TypeError('network down'))
+        .mockResolvedValueOnce(Response.json({ movie_list: [] }))
+
+      await expect(
+        searchMoviesDetailed('terminator', 'k', 'en', fetcher)
+      ).resolves.toMatchObject({ kind: 'error' })
+      await expect(
+        searchMoviesDetailed('terminator', 'k', 'en', fetcher)
+      ).resolves.toMatchObject({ kind: 'ok' })
+    })
+  })
 })
