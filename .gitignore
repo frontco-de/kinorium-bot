@@ -10,3 +10,6 @@ backups
 *.log
 
 .DS_Store
+
+# Per-developer Claude Code settings and permission rules.
+.claude/
