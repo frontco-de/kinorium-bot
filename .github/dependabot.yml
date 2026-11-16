@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Wait a week before proposing a freshly published version. Security
+    # updates are not delayed by this.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore
@@ -14,11 +18,23 @@ updates:
         dependency-type: production
       development:
         dependency-type: development
+      # Security updates ignore the schedule and open as soon as an advisory is
+      # published, so batch the development ones into a single PR. Runtime
+      # security fixes stay ungrouped and are never delayed.
+      development-security:
+        applies-to: security-updates
+        dependency-type: development
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
+    groups:
+      actions:
+        patterns:
+          - '*'
